@@ -3,9 +3,10 @@ import { FormProvider, useForm } from 'react-hook-form'
 import { CONSTANTS } from '../constant/data.const'
 import TextField from '@/components/ui/TextField'
 import { useDebounce } from '@/utils/Debounce';
+import type { TMode } from '../type/data';
 
 type SearchProps = {
-  type: 'target' | 'introducer',
+  type: TMode,
   getSearchQuery: (value: string) => void
 };
 

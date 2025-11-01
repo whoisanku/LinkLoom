@@ -1,8 +1,13 @@
 export const CONSTANTS = {
   TITLE: {
-    MAIN_HEADING: 'Link Loom',
-    SUB_HEADING:
-      'Replace this',
+    MAIN_HEADING: {
+      TARGET: 'Target Mode',
+      INTRODUCER: 'Introducer Mode'
+    },
+    SUB_HEADING: {
+      TARGET: 'replace this',
+      INTRODUCER: 'replace this'
+    },
   },
   SEARCH: {
     PLACEHOLDER: {
