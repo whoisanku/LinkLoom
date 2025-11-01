@@ -1,25 +1,36 @@
+import Page from '@/components/ui/Page';
+import Search from './components/Search';
+import Title from './components/Title';
+import { CONSTANTS } from './constant/data.const';
+import { Tabs } from '@/components/ui/Tabs';
+import TargetTable from './components/TargetTable';
+import IntroducerTable from './components/IntroducerTable';
+import type { TabsProps } from '@/types/components';
 
-import Page from '@ui/Page'
-import Title from '@features/home/components/Title'
-import { CONSTANTS } from '@features/home/constant/data.const'
-import TableData from '@features/home/components/TableData'
-import { TABLE_DATA } from '@features/home/constant/tableData.const'
+export default function LinkLoomApp() {
 
-const Home = () => {
+
+  const tabsItem: TabsProps = [
+    {
+      name: 'Target',
+      field: <TargetTable data={[]} />,
+      key: 'targetTable'
+    },
+    {
+      name: 'introducer',
+      field: <IntroducerTable data={[]} />,
+      key: 'introducerTable'
+    },
+
+  ]
 
   return (
     <Page>
-      <div className="">
-        <section className="flex flex-col py-10 gap-5">
-          <Title mainheading={CONSTANTS.TITLE.MAIN_HEADING} subHeading={CONSTANTS.TITLE.SUB_HEADING} />
-        </section>
-        <section className="py-2">
-          <TableData data={TABLE_DATA} />
-        </section>
-      </div>
+      <Title mainheading={CONSTANTS.TITLE.MAIN_HEADING} subHeading={CONSTANTS.TITLE.SUB_HEADING} />
+      <Search type={'target'} getSearchQuery={(data) => console.log(data)} />
+
+      <Tabs tabs={tabsItem} />
     </Page>
   )
+
 }
-
-export default Home
-

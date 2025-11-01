@@ -1,9 +1,14 @@
-
 export const CONSTANTS = {
   TITLE: {
-    MAIN_HEADING: 'Project Initialized Successfully',
+    MAIN_HEADING: 'Link Loom',
     SUB_HEADING:
-      'You can start building your project now',
+      'Replace this',
+  },
+  SEARCH: {
+    PLACEHOLDER: {
+      TARGET: 'I am looking for ...',
+      INTRODUCER: 'I am looking for someone to introduce me to ...'
+    },
   },
   TABLE: {
     HEADING: 'Project Structure',

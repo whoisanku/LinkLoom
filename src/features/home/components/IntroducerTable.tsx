@@ -1,36 +1,35 @@
-
 import Table from '@ui/Table'
 import Heading from '@ui/Typography'
 import { CONSTANTS } from '@features/home/constant/data.const'
 import type { ColumnDef } from '@tanstack/react-table'
-import type { FolderTableRow } from '@features/home/type/FolderTableRow'
+import type { TIntroducer } from '@features/home/type/data'
 
-const TableData = ({ data }: { data: FolderTableRow[] }) => {
-  const columns: ColumnDef<FolderTableRow>[] = [
+const IntroducerTable = ({ data }: { data: TIntroducer[] }) => {
+  const columns: ColumnDef<TIntroducer>[] = [
     {
-      accessorKey: 'folderName',
-      header: 'Folder Name',
+      accessorKey: 'username',
+      header: 'Username',
       cell: ({ row }) => (
         <div className="flex flex-col gap-1">
-          <div className="font-semibold text-white">{row.original.folderName}</div>
+          <div className="font-semibold text-white">{row.original.username}</div>
         </div>
       ),
     },
     {
-      accessorKey: 'folderDescription',
-      header: 'Folder Description',
+      accessorKey: 'score',
+      header: 'Score',
       cell: ({ row }) => (
         <div className="flex flex-col gap-1">
-          <div className="text-sm text-secondary">{row.original.folderDescription}</div>
+          <div className="text-sm text-secondary">{row.original.score}</div>
         </div>
       ),
     },
     {
-      accessorKey: 'folderPath',
-      header: 'Folder Path',
+      accessorKey: 'connections',
+      header: 'Connections',
       cell: ({ row }) => (
         <div className="flex flex-col gap-1">
-          <div className="font-semibold text-white">{row.original.folderPath}</div>
+          <div className="font-semibold text-white">{row.original.connections}</div>
         </div>
       ),
     },
@@ -44,5 +43,5 @@ const TableData = ({ data }: { data: FolderTableRow[] }) => {
   )
 }
 
-export default TableData
+export default IntroducerTable
 

@@ -1,13 +1,7 @@
-
 import { useSearchParams } from 'react-router-dom'
 import Dropdown from './Dropdown'
 import Heading from './Typography'
-
-type TabsProps = {
-  name: string
-  field: React.ReactNode
-  key: string
-}[]
+import type { TabsProps } from '@/types/components'
 
 export const Tabs = ({ tabs }: { tabs: TabsProps }) => {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -42,9 +36,8 @@ export const Tabs = ({ tabs }: { tabs: TabsProps }) => {
                 setSearchParams({ mode: tab.key })
               }
             }}
-            className={`cursor-pointer transition ${
-              activeTab === tab.key ? 'text-white opacity-100' : 'text-white opacity-30 hover:opacity-60'
-            }`}
+            className={`cursor-pointer transition ${activeTab === tab.key ? 'text-white opacity-100' : 'text-white opacity-30 hover:opacity-60'
+              }`}
           >
             {tab.name}
           </span>
