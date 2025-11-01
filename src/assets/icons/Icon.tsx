@@ -1,4 +1,3 @@
-
 import { CiSearch, CiAt } from 'react-icons/ci'
 import { GoBriefcase } from 'react-icons/go'
 import { FaPlay, FaPause } from 'react-icons/fa'
