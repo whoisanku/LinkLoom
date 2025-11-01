@@ -1,9 +1,9 @@
-
 import Table from '@ui/Table'
-import Heading from '@ui/Typography'
 import { CONSTANTS } from '@features/home/constant/data.const'
 import type { ColumnDef } from '@tanstack/react-table'
 import type { TTarget } from '@features/home/type/data'
+import Search from './Search'
+import Title from './Title'
 
 const TargetTable = ({ data }: { data: TTarget[] }) => {
   const columns: ColumnDef<TTarget>[] = [
@@ -37,8 +37,12 @@ const TargetTable = ({ data }: { data: TTarget[] }) => {
   ]
 
   return (
-    <div className="mx-auto flex flex-col gap-2">
-      <Heading variant="h3" title={CONSTANTS.TABLE.HEADING} color="white" fontWeight={700} />
+    <div className="flex flex-col gap-2">
+
+      <Title mainheading={CONSTANTS.TITLE.MAIN_HEADING.TARGET} subHeading={CONSTANTS.TITLE.SUB_HEADING.TARGET} />
+
+      <Search type={'target'} getSearchQuery={(data) => console.log(data)} />
+
       <Table data={data} columns={columns} />
     </div>
   )

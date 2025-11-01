@@ -30,7 +30,7 @@ export default function LinkLoomApp() {
       key: 'targetTable'
     },
     {
-      name: 'introducer',
+      name: 'Introducer',
       field: <IntroducerTable data={[]} />,
       key: 'introducerTable'
     },
@@ -39,10 +39,10 @@ export default function LinkLoomApp() {
 
   return (
     <Page>
-      <Title mainheading={CONSTANTS.TITLE.MAIN_HEADING.TARGET} subHeading={CONSTANTS.TITLE.SUB_HEADING.TARGET} />
-      <Search type={mode} getSearchQuery={(data) => console.log(data)} />
+      <div className='flex flex-col gap-2'>
 
-      <Tabs tabs={tabsItem} />
+        <Tabs tabs={tabsItem} />
+      </div>
     </Page>
   )
 

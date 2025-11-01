@@ -47,7 +47,8 @@ export const Tabs = ({ tabs }: { tabs: TabsProps }) => {
       {/* Mobile View */}
       <div className="md:hidden flex justify-between items-center">
         {/* <span className={`cursor-pointer transition text-white opacity-100`}>{activeTab}</span> */}
-        <Heading variant="h3" title={activeTabName} color="white" fontWeight={700} />
+        {/* <Heading variant="h3" title={activeTabName} color="white" fontWeight={700} /> */}
+        <div></div>
         <Dropdown
           options={dropdownOptions}
           value={activeTabName}

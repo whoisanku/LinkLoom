@@ -3,6 +3,8 @@ import Heading from '@ui/Typography'
 import { CONSTANTS } from '@features/home/constant/data.const'
 import type { ColumnDef } from '@tanstack/react-table'
 import type { TIntroducer } from '@features/home/type/data'
+import Title from './Title'
+import Search from './Search'
 
 const IntroducerTable = ({ data }: { data: TIntroducer[] }) => {
   const columns: ColumnDef<TIntroducer>[] = [
@@ -36,8 +38,12 @@ const IntroducerTable = ({ data }: { data: TIntroducer[] }) => {
   ]
 
   return (
-    <div className="mx-auto flex flex-col gap-2">
-      <Heading variant="h3" title={CONSTANTS.TABLE.HEADING} color="white" fontWeight={700} />
+    <div className="flex flex-col gap-2">
+
+      <Title mainheading={CONSTANTS.TITLE.MAIN_HEADING.INTRODUCER} subHeading={CONSTANTS.TITLE.SUB_HEADING.INTRODUCER} />
+
+      <Search type={'introducer'} getSearchQuery={(data) => console.log(data)} />
+
       <Table data={data} columns={columns} />
     </div>
   )
