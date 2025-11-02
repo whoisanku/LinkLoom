@@ -25,6 +25,7 @@ export interface HeadingType {
   color?: string
   fontWeight?: 400 | 500 | 600 | 700
   onClick?: any
+  className?: string
 }
 
 const HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']
@@ -52,7 +53,7 @@ const fontWeightStyles: Record<number, string> = {
   700: 'font-bold',
 }
 
-const Heading = ({ variant, icon, title, disabled, color, fontWeight = 400, onClick, ...rest }: HeadingType): any => {
+const Heading = ({ variant, icon, title, disabled, color, fontWeight = 400, onClick, className, ...rest }: HeadingType): any => {
   const textTag = HEADING_TAGS.includes(variant) ? variant : 'span'
   const Component = textTag as keyof JSX.IntrinsicElements
 
@@ -62,7 +63,7 @@ const Heading = ({ variant, icon, title, disabled, color, fontWeight = 400, onCl
   const cursorStyle = onClick ? 'cursor-pointer' : ''
   const disabledStyle = disabled ? 'opacity-50 pointer-events-none' : ''
 
-  const combinedClassName = cn(baseStyles, variantStyle, fontWeightStyle, cursorStyle, disabledStyle)
+  const combinedClassName = cn(baseStyles, variantStyle, fontWeightStyle, cursorStyle, disabledStyle, className)
 
   return (
     <Component className={combinedClassName} style={{ color: color || '#000000' }} onClick={onClick} {...rest}>

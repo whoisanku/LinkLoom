@@ -1,22 +1,57 @@
 import { useAccount, useConnect } from 'wagmi'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { sdk } from '@farcaster/miniapp-sdk'
 import Heading from '@ui/Typography'
 import Button from '../ui/Button'
+import { useNavigate } from 'react-router-dom'
+type UserProfile = {
+  fid: number
+  displayName?: string
+  username?: string
+  pfpUrl?: string
+}
 
 const ProfileButton = () => {
-  useEffect(() => {
-    sdk.actions.ready();
-  }, []);
+  const [user, setUser] = useState<UserProfile | null>(null)
 
-  const { isConnected, address } = useAccount()
+  useEffect(() => {
+    let isMounted = true
+
+    const loadContext = async () => {
+      try {
+        await sdk.actions.ready()
+        const context = await sdk.context
+        if (!isMounted) return
+        if (context?.user) {
+          const { fid, displayName, username, pfpUrl } = context.user
+          setUser({ fid, displayName, username, pfpUrl })
+        }
+      } catch (error) {
+        console.error('Failed to load Farcaster user context', error)
+      }
+    }
+
+    void loadContext()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const { isConnected } = useAccount()
   const { connect, connectors } = useConnect()
+
+  const navigate = useNavigate()
 
   if (isConnected) {
     return (
       <>
-        <div>You're connected!</div>
-        <div>Address: {address}</div>
+        <div className="flex items-center cursor-pointer gap-3">
+          {user?.pfpUrl ? (
+            <img src={user.pfpUrl} alt={user?.displayName || 'Farcaster user'} className="w-8 h-8 rounded-full object-cover" onClick={() => navigate('/profile')}/>
+          ) : null}
+        </div>
+       
       </>
     )
   } else {
@@ -33,9 +68,11 @@ const ProfileButton = () => {
 
 const Header = () => {
 
+  const navigate = useNavigate()
+
   return (
-    <div className="bg-header py-4 px-8 flex justify-between items-center sticky top-0 z-10">
-      <Heading variant="h2" title="Link Loom" color="white" fontWeight={700} />
+    <div className="bg-header py-2 px-4 flex justify-between items-center sticky top-0 z-10">
+      <Heading variant="h3" title="Link Loom" color="white" fontWeight={700} onClick={() => navigate('/')} />
       <div className="flex gap-4">
         <ProfileButton />
       </div>

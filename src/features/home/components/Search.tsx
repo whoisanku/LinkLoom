@@ -1,8 +1,7 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
 import { FormProvider, useForm } from 'react-hook-form'
 import { CONSTANTS } from '../constant/data.const'
 import TextField from '@/components/ui/TextField'
-import { useDebounce } from '@/utils/Debounce';
 import type { TMode } from '../type/data';
 import Heading from '@/components/ui/Typography';
 import { ICONS } from '@/assets/icons/Icon';
@@ -21,7 +20,7 @@ const Search = ({ type, getSearchQuery, isLoading, setIsLoading }: SearchProps) 
     defaultValues: { search: '' },
   })
 
-  const searchValue = useDebounce(methods.watch('search'));
+  const searchValue = methods.watch('search');
 
   const handleSearch = useCallback((value: string) => {
     getSearchQuery(value);
@@ -47,26 +46,25 @@ const Search = ({ type, getSearchQuery, isLoading, setIsLoading }: SearchProps) 
 
 
   const searchIcon = (
-    <div className='text-xl p-2 border mx-auto my-auto rounded-full bg-white text-black font-bold'> {ICONS.search} </div>
+    <div className='text-xl p-1.5 mx-auto my-auto rounded-full border-0 bg-white text-black font-bold'> {ICONS.search} </div>
   )
 
   return (
-    <div className="relative w-full">
-      <Heading variant={'h2'} title={'What are you looking for?'} color='white' />
-      <div className="flex flex-col gap-3 rounded-md">
+    <div className="relative flex flex-col gap-4 w-full">
+      <Heading variant={'h2'} title={CONSTANTS.TITLE.SEARCH} color='white' className='justify-center text-center'/>
+      <div className="flex flex-col gap-3">
         <FormProvider {...methods}>
           <form onSubmit={(e) => e.preventDefault()}>
-            <div className="w-full flex bg-primary">
+            <div className="w-full flex rounded-full bg-primary">
               <TextField
                 name="search"
                 placeholder={placeholder}
                 customLabel=""
-                type="search"
                 disabled={isLoading}
               />
-              <Button onClick={() => setIsLoading(true)}>
+            {searchValue ?   (<Button className='rounded-full' onClick={() => setIsLoading(true)}>
                 {searchValue ? searchIcon : ""}
-              </Button>
+              </Button>) : ""}
             </div>
           </form>
         </FormProvider>

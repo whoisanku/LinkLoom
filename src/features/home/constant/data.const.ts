@@ -1,5 +1,6 @@
 export const CONSTANTS = {
   TITLE: {
+    SEARCH: 'What are you looking for?',
     MAIN_HEADING: {
       TARGET: 'Target Mode',
       INTRODUCER: 'Introducer Mode'
