@@ -4,6 +4,8 @@ import { CONSTANTS } from '../constant/data.const'
 import TextField from '@/components/ui/TextField'
 import { useDebounce } from '@/utils/Debounce';
 import type { TMode } from '../type/data';
+import Title from './Title';
+import Heading from '@/components/ui/Typography';
 
 type SearchProps = {
   type: TMode,
@@ -41,6 +43,7 @@ const Search = ({ type, getSearchQuery }: SearchProps) => {
 
   return (
     <div className="relative w-full">
+      <Heading variant={'h2'} title={'What are you looking for?'} color='white' />
       <div className="flex flex-col gap-3 rounded-md">
         <FormProvider {...methods}>
           <form onSubmit={(e) => e.preventDefault()}>

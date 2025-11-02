@@ -1,33 +1,22 @@
 import Page from '@/components/ui/Page';
-import { Tabs } from '@/components/ui/Tabs';
-import TargetTable from './components/TargetTable';
-import IntroducerTable from './components/IntroducerTable';
-import type { TabsProps } from '@/types/components';
+import { useState } from 'react';
+import Search from './components/Search';
 
 export default function LinkLoomApp() {
 
+  const [searchQuery, setSearchQuery] = useState('')
 
+  const handleSearchQuery = (data: string) => { setSearchQuery(data) }
 
+  console.log(searchQuery)
 
-  const tabsItem: TabsProps = [
-    {
-      name: 'Target',
-      field: <TargetTable />,
-      key: 'targetTable'
-    },
-    {
-      name: 'Introducer',
-      field: <IntroducerTable data={[]} />,
-      key: 'introducerTable'
-    },
-
-  ]
 
   return (
     <Page>
-      <div className='flex flex-col gap-2'>
+      <div className='flex flex-col justify-center h-full pb-30'>
 
-        <Tabs tabs={tabsItem} />
+        <Search type={'target'} getSearchQuery={handleSearchQuery} />
+
       </div>
     </Page>
   )
