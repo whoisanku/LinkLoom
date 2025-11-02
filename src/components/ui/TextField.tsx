@@ -46,7 +46,7 @@ export const TextField: FC<TextFieldProps> = ({
           <label className="font-bold block mb-6 text-white">
             {customLabel} {required ? <span style={{ color: '#FF1943' }}>*</span> : ''}
           </label>
-          <div className="flex items-center w-full bg-primary p-4 rounded-md gap-8">
+          <div className="flex items-center w-full bg-primary p-4 rounded-md gap-2">
             <Icon />
             <input
               {...field}

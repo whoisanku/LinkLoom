@@ -1,4 +1,4 @@
-
+import { cn } from '@/lib/classname'
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,17 +10,25 @@ import {
 interface TableProps<T> {
   data: T[]
   columns: ColumnDef<T>[]
+  rowClassName?: string,
+  onRowClick?: (row: T) => void
 }
 
-export default function Table<T extends object>({ data, columns }: TableProps<T>) {
+export default function Table<T extends object>({ data, columns, rowClassName, onRowClick }: TableProps<T>) {
   const table: ReactTable<T> = useReactTable<T>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
 
+  const handleRowClick = (row: T) => {
+    if (onRowClick) {
+      onRowClick(row)
+    }
+  }
+
   return (
-    <table className="w-full border-collapse border border-header rounded-md">
+    <table className="w-full border-collapse border border-header rounded-md overflow-x-scroll">
       <thead className="bg-primary text-white">
         {table.getHeaderGroups().map((hg) => (
           <tr key={hg.id} className="text-left border-b border-header rounded-t-md">
@@ -34,7 +42,7 @@ export default function Table<T extends object>({ data, columns }: TableProps<T>
       </thead>
       <tbody>
         {table.getRowModel().rows.map((row) => (
-          <tr key={row.id} className="border-b border-header hover:bg-header rounded-b-md">
+          <tr key={row.id} className={cn("border-b border-header hover:bg-header rounded-b-md", rowClassName ? 'cursor-pointer' : '')} onClick={() => handleRowClick(row.original)}>
             {row.getVisibleCells().map((cell) => (
               <td key={cell.id} className="text-left py-3 px-4">
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -46,4 +54,3 @@ export default function Table<T extends object>({ data, columns }: TableProps<T>
     </table>
   )
 }
-

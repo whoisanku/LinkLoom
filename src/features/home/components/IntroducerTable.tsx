@@ -1,5 +1,4 @@
 import Table from '@ui/Table'
-import Heading from '@ui/Typography'
 import { CONSTANTS } from '@features/home/constant/data.const'
 import type { ColumnDef } from '@tanstack/react-table'
 import type { TIntroducer } from '@features/home/type/data'
