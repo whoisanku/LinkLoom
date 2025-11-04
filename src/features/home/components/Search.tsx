@@ -26,45 +26,64 @@ const Search = ({ type, getSearchQuery, isLoading, setIsLoading }: SearchProps) 
     getSearchQuery(value);
   }, [getSearchQuery]);
 
-  useEffect(() => {
-    // If search is empty or less than 3 characters, clear the search
-    if (!searchValue || searchValue.trim().length === 0) {
-      handleSearch('');
-      return;
-    }
-
-    // Only search if 3 or more characters
-    if (searchValue.trim().length < 3) return;
-
-    handleSearch(searchValue);
-  }, [searchValue, handleSearch]);
-
   const placeholder =
     type === 'introducer'
       ? CONSTANTS.SEARCH.PLACEHOLDER.INTRODUCER
       : CONSTANTS.SEARCH.PLACEHOLDER.TARGET;
 
+  useEffect(() => {
+    if (!searchValue || searchValue.trim().length === 0) {
+      handleSearch('');
+      return;
+    }
+
+    if (searchValue.trim().length < 3) return;
+
+    handleSearch(searchValue);
+  }, [searchValue, handleSearch]);
+
 
   const searchIcon = (
-    <div className='text-xl p-1.5 mx-auto my-auto rounded-full border-0 bg-white text-black font-bold'> {ICONS.search} </div>
+    <div className='text-xl p-1.5 mx-auto my-auto rounded-full border-0 bg-white text-black font-bold'>
+      {ICONS.search}
+    </div>
   )
 
   return (
     <div className="relative flex flex-col gap-4 w-full">
-      <Heading variant={'h2'} title={CONSTANTS.TITLE.SEARCH} color='white' className='justify-center text-center'/>
+      <Heading variant={'h2'} title={CONSTANTS.TITLE.SEARCH} color='white' className='justify-center text-center' />
       <div className="flex flex-col gap-3">
         <FormProvider {...methods}>
-          <form onSubmit={(e) => e.preventDefault()}>
+          <form
+            onSubmit={(event) => event.preventDefault()}
+            autoComplete="off"
+          >
             <div className="w-full flex rounded-full bg-primary">
               <TextField
                 name="search"
+                type="search"
                 placeholder={placeholder}
                 customLabel=""
                 disabled={isLoading}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                inputMode="search"
               />
-            {searchValue ?   (<Button className='rounded-full' onClick={() => setIsLoading(true)}>
-                {searchValue ? searchIcon : ""}
-              </Button>) : ""}
+              {searchValue ? (
+                <Button
+                  type="button"
+                  className='rounded-full'
+                  onClick={() => setIsLoading(true)}
+                  disabled={isLoading || searchValue.trim().length < 3}
+                  loading={isLoading}
+                >
+                  {searchValue ? searchIcon : ''}
+                </Button>
+              ) : (
+                ''
+              )}
             </div>
           </form>
         </FormProvider>

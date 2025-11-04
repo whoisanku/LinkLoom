@@ -22,3 +22,117 @@
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+.voyage-loading-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  overflow: hidden;
+  border: none;
+  background: radial-gradient(circle at 50% 20%, rgba(54, 165, 255, 0.08), transparent 55%),
+    linear-gradient(180deg, #1a2026 0%, #212932 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 2200px;
+}
+
+.voyage-loading-space {
+  position: absolute;
+  inset: 0;
+  perspective: 1200px;
+  background: linear-gradient(200deg, rgba(36, 46, 56, 0.5) 0%, rgba(26, 32, 38, 0.9) 60%, rgba(26, 32, 38, 0.95) 100%);
+  overflow: hidden;
+  mask-image: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.92), transparent 90%);
+}
+
+.voyage-loading-space::before,
+.voyage-loading-space::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(54, 165, 255, 0.08), transparent 40%),
+    radial-gradient(circle at 75% 30%, rgba(54, 165, 255, 0.06), transparent 45%),
+    radial-gradient(circle at 50% 80%, rgba(36, 46, 56, 0.3), transparent 55%);
+  mix-blend-mode: screen;
+  filter: blur(6px);
+}
+
+.voyage-loading-space::after {
+  opacity: 0.35;
+  transform: scale(1.2);
+}
+
+.voyage-loading-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1600px;
+  pointer-events: none;
+}
+
+.voyage-word {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-style: preserve-3d;
+  transform: translate3d(calc(-50% + var(--voyage-offset, 0px)), 140px, -600px) scale(0.35) rotateX(28deg);
+  font-size: clamp(1.1rem, 2.6vw, 2.8rem);
+  font-weight: 600;
+  letter-spacing: 1.1em;
+  opacity: 0;
+  text-transform: uppercase;
+  color: rgba(138, 152, 166, 0.7);
+  filter: blur(14px);
+  white-space: nowrap;
+  animation-name: voyage-word;
+  animation-timing-function: cubic-bezier(0.16, 0.52, 0.21, 1);
+  animation-iteration-count: infinite;
+}
+
+.voyage-word:nth-child(3n) {
+  color: rgba(54, 165, 255, 0.65);
+}
+
+.voyage-word:nth-child(4n) {
+  color: rgba(138, 152, 166, 0.5);
+}
+
+@keyframes voyage-word {
+  0% {
+    transform: translate3d(calc(-50% + var(--voyage-offset, 0px)), 260px, -960px) scale(0.18) rotateX(38deg);
+    opacity: 0;
+    filter: blur(22px);
+    letter-spacing: 1.8em;
+  }
+  30% {
+    transform: translate3d(calc(-50% + var(--voyage-offset, 0px)), 140px, -520px) scale(0.46) rotateX(24deg);
+    opacity: 0.55;
+    filter: blur(16px);
+    letter-spacing: 1.35em;
+  }
+  50% {
+    transform: translate3d(calc(-50% + var(--voyage-offset, 0px)), 15px, -160px) scale(1.12) rotateX(6deg);
+    opacity: 1;
+    filter: blur(4px);
+    letter-spacing: 0.5em;
+  }
+  75% {
+    transform: translate3d(calc(-50% + var(--voyage-offset, 0px)), -100px, 220px) scale(0.9) rotateX(-10deg);
+    opacity: 0.42;
+    filter: blur(10px);
+    letter-spacing: 0.85em;
+  }
+  100% {
+    transform: translate3d(calc(-50% + var(--voyage-offset, 0px)), -200px, 520px) scale(0.52) rotateX(-24deg);
+    opacity: 0;
+    filter: blur(16px);
+    letter-spacing: 1.2em;
+  }
+}

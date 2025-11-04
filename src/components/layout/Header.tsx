@@ -12,6 +12,9 @@ type UserProfile = {
 }
 
 const ProfileButton = () => {
+  const { isConnected } = useAccount()
+  const { connect, connectors } = useConnect()
+  const navigate = useNavigate()
   const [user, setUser] = useState<UserProfile | null>(null)
 
   useEffect(() => {
@@ -37,11 +40,6 @@ const ProfileButton = () => {
       isMounted = false
     }
   }, [])
-
-  const { isConnected } = useAccount()
-  const { connect, connectors } = useConnect()
-
-  const navigate = useNavigate()
 
   if (isConnected) {
     return (
@@ -71,7 +69,7 @@ const Header = () => {
   const navigate = useNavigate()
 
   return (
-    <div className="bg-header py-2 px-4 flex justify-between items-center sticky top-0 z-10">
+    <div className="bg-header py-2 px-2 flex justify-between items-center sticky top-0 z-10">
       <Heading variant="h3" title="Link Loom" color="white" fontWeight={700} onClick={() => navigate('/')} />
       <div className="flex gap-4">
         <ProfileButton />
