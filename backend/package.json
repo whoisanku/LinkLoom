@@ -1,0 +1,17 @@
+{
+  "name": "linkloom-backend",
+  "version": "1.0.0",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "hono": "^3.11.7",
+    "@google/generative-ai": "^0.21.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
