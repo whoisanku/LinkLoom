@@ -1,4 +1,5 @@
 import { SeedZ, type SeedOut, SYSTEM_PROMPT } from "./seed-schema";
+import { normalizeHandle, normalizeFarcasterHandle } from "./handle-utils";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
 
@@ -49,7 +50,7 @@ Return JSON only per schema.`;
   if (!raw.normalized_keywords) raw.normalized_keywords = { positive: [], weak: [], negative: [] };
   if (!raw.topic) raw.topic = String(query || "");
   const parsed = SeedZ.parse(raw);
-  parsed.seeds.farcaster = parsed.seeds.farcaster.map(h => h.replace(/^@/, "").toLowerCase());
-  parsed.seeds.twitter = parsed.seeds.twitter.map(h => h.replace(/^@/, "").toLowerCase());
+  parsed.seeds.farcaster = Array.from(new Set(parsed.seeds.farcaster.map(normalizeFarcasterHandle).filter(Boolean)));
+  parsed.seeds.twitter = Array.from(new Set(parsed.seeds.twitter.map(normalizeHandle).filter(Boolean)));
   return parsed;
 }

@@ -116,3 +116,11 @@ Use Cloudflare Tunnel to share your local Vite server without exposing ports.
 - **UI** – Tailwind-powered layout components (`Header`, `Page`) wrap feature modules. Primitive components like `Button` manage styling variants and loading states.
 
 Feel free to open an issue or submit a pull request as you expand LinkLoom.
+
+
+
+https://client.farcaster.xyz/v2/search-channels?q=dwr&prioritizeFollowed=false&forComposer=false&limit=2
+
+https://client.farcaster.xyz/v2/search-users?q=dwr&excludeSelf=false&limit=2&includeDirectCastAbility=false
+
+https://client.farcaster.xyz/v2/search-casts?q=dwr&limit=20

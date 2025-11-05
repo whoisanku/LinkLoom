@@ -15,6 +15,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/fc": {
+        target: "https://client.farcaster.xyz",
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/fc/, ""),
+      },
     },
   },
   resolve: {

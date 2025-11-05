@@ -100,6 +100,7 @@ Keys and rules:
 
 Constraints:
 - Handles must be usernames without @.
+- Farcaster usernames must exclude suffixes like ".eth", ".base.eth", ".farcaster", ".warpcast" (use only the root handle).
 - Prefer orgs/labs/foundations; include a few key maintainers if essential.
 - Keep seeds small but high-quality: up to 8 per platform.
 - If unsure about a handle, put it in candidates with low confidence and do not include in seeds.

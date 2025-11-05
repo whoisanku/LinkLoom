@@ -1,23 +1,48 @@
 import Page from '@/components/ui/Page';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import Search from './components/Search';
 import VoyageLoading from './components/VoyageLoading';
 import SeedEditor from './components/SeedEditor';
 import { ICONS } from '@/assets/icons/Icon';
 import Button from '@/components/ui/Button';
-import { autoSeed } from '@/lib/autoSeedClient';
+import { autoSeed, refineSeedsWithEvidence } from '@/lib/autoSeedClient';
+import { gatherEvidenceForHandles } from '@/lib/farcasterValidation';
 import type { SeedOut } from '@/lib/seed-schema';
 
+const resolveGeminiErrorMessage = (error: unknown, fallback: string) => {
+  const raw = String((error as Error)?.message ?? error ?? '').toLowerCase();
+  if (!raw) return fallback;
+  if (raw.includes('overloaded') || raw.includes('service unavailable') || raw.includes('503')) {
+    return 'Gemini is overloaded right now. Wait a few moments and try again.';
+  }
+  if (raw.includes('network') || raw.includes('failed to fetch')) {
+    return 'Network hiccup during signal generation. Check your connection and retry.';
+  }
+  return fallback;
+};
+
 export default function LinkLoomApp() {
+
+  const pageRef = useRef<HTMLDivElement>(null)
+  const scrollToTop = useCallback(() => {
+    const root = pageRef.current
+    if (root && typeof root.scrollTo === 'function') {
+      root.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [executedQuery, setExecutedQuery] = useState('')
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
   const [seeds, setSeeds] = useState<SeedOut | null>(null)
   const [draftSeeds, setDraftSeeds] = useState<{ farcaster: string[]; twitter: string[] }>({
     farcaster: [],
     twitter: [],
   })
+  const [isRefined, setIsRefined] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const handleSearchQuery = (data: string) => { setSearchQuery(data) }
@@ -43,11 +68,13 @@ export default function LinkLoomApp() {
             farcaster: [...out.seeds.farcaster],
             twitter: [...out.seeds.twitter],
           })
+          setIsRefined(false)
+          scrollToTop()
         }
       } catch (error) {
         console.error('autoSeed failed', error)
         if (!isCancelled) {
-          setErrorMessage('We lost the trail. Try charting again.')
+          setErrorMessage(resolveGeminiErrorMessage(error, 'We lost the trail. Try charting again.'))
           setSeeds(null)
         }
       } finally {
@@ -69,6 +96,9 @@ export default function LinkLoomApp() {
     setExecutedQuery('')
     setErrorMessage(null)
     setIsLoading(false)
+    setIsRefined(false)
+    setIsRefining(false)
+    scrollToTop()
   }
 
   const setBodyOverflow = (lock: boolean) => {
@@ -77,13 +107,15 @@ export default function LinkLoomApp() {
   }
 
   useEffect(() => {
-    setBodyOverflow(isLoading)
+    const active = isLoading || isRefining
+    setBodyOverflow(active)
     return () => {
       setBodyOverflow(false)
     }
-  }, [isLoading])
+  }, [isLoading, isRefining])
 
   const handleDraftChange = (type: 'farcaster' | 'twitter', index: number, value: string) => {
+    setIsRefined(false)
     setDraftSeeds((prev) => {
       const next = { ...prev, [type]: [...prev[type]] }
       next[type][index] = value
@@ -92,6 +124,7 @@ export default function LinkLoomApp() {
   }
 
   const handleDraftRemove = (type: 'farcaster' | 'twitter', index: number) => {
+    setIsRefined(false)
     setDraftSeeds((prev) => {
       const next = { ...prev, [type]: prev[type].filter((_, i) => i !== index) }
       return next
@@ -99,10 +132,40 @@ export default function LinkLoomApp() {
   }
 
   const handleDraftAdd = (type: 'farcaster' | 'twitter') => {
+    setIsRefined(false)
     setDraftSeeds((prev) => {
       const next = { ...prev, [type]: [...prev[type], ''] }
       return next
     })
+  }
+
+  const handleConfirm = async () => {
+    if (!seeds || isRefining) return
+    setIsRefining(true)
+    setIsRefined(false)
+    setErrorMessage(null)
+    const query = executedQuery || searchQuery
+    try {
+      const evidence = await gatherEvidenceForHandles(draftSeeds.farcaster)
+      const refined = await refineSeedsWithEvidence({
+        query,
+        roughSeed: seeds,
+        confirmedSeeds: draftSeeds,
+        evidence,
+      })
+      setSeeds(refined)
+      setDraftSeeds({
+        farcaster: [...refined.seeds.farcaster],
+        twitter: [...refined.seeds.twitter],
+      })
+      setIsRefined(true)
+      scrollToTop()
+    } catch (error) {
+      console.error('refineSeeds failed', error)
+      setErrorMessage(resolveGeminiErrorMessage(error, 'Unable to validate Farcaster seeds right now. Try again shortly.'))
+    } finally {
+      setIsRefining(false)
+    }
   }
 
   const combinedDraftList = useMemo(() => {
@@ -119,16 +182,19 @@ export default function LinkLoomApp() {
     return [...farcasterList, ...twitterList]
   }, [draftSeeds])
 
+  const confirmLabel = isRefining ? 'Validating...' : isRefined ? 'Refine Again' : 'Confirm'
+  const confirmIsSuccess = isRefined && !isRefining
+
   return (
     <>
-      {isLoading && (
+      {(isLoading || isRefining) && (
         <div className="fixed inset-0 top-[48px] z-50 bg-background overflow-hidden">
           <VoyageLoading query={executedQuery || searchQuery} />
         </div>
       )}
       
-      <Page>
-        <div className='relative flex h-full w-full flex-col items-center justify-center'>
+      <Page ref={pageRef}>
+        <div className='relative flex h-full w-full flex-col items-center justify-start'>
 
         {!isLoading && (
           <div className='w-full max-w-5xl px-4 sm:px-6 lg:px-10'>
@@ -195,6 +261,11 @@ export default function LinkLoomApp() {
                     <div className="fixed bottom-4 left-1/2 z-40 w-[min(96%,1100px)] -translate-x-1/2 rounded-full border border-white/10 bg-black/40 px-4 py-3 backdrop-blur-md">
                       <div className="flex items-center gap-3 overflow-x-auto">
                         <span className="shrink-0 text-[10px] uppercase tracking-[0.35em] text-white/50">Preview</span>
+                        {confirmIsSuccess && (
+                          <span className="shrink-0 rounded-full border border-emerald-400/40 bg-emerald-400/15 px-3 py-1 text-[10px] uppercase tracking-[0.35em] text-emerald-200">
+                            Refined
+                          </span>
+                        )}
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           {combinedDraftList.map(({ id, type, value }) => (
                             <span
@@ -212,9 +283,16 @@ export default function LinkLoomApp() {
                     </div>
                     <Button
                       variant="secondary"
-                      className="fixed bottom-6 right-6 z-50 rounded-full bg-secondary px-5 py-3 text-black hover:bg-secondary/80"
+                      className={`fixed bottom-6 right-6 z-50 rounded-full px-5 py-3 transition ${
+                        confirmIsSuccess
+                          ? 'bg-emerald-400 text-black hover:bg-emerald-300'
+                          : 'bg-secondary text-black hover:bg-secondary/80'
+                      }`}
+                      onClick={handleConfirm}
+                      disabled={isRefining || combinedDraftList.length === 0}
+                      loading={isRefining}
                     >
-                      Confirm
+                      {confirmLabel}
                     </Button>
                   </>
                 )}
