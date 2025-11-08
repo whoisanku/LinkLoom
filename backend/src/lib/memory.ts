@@ -22,6 +22,9 @@ export class MemoryProtocolClient {
 
     const url = `${MEMORY_API_BASE}/farcaster/followers?${params.toString()}`;
     
+    console.log(`🔗 Memory API Request: ${url}`);
+    console.log(`🔑 Using token: ${this.token.substring(0, 10)}...`);
+    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -30,11 +33,18 @@ export class MemoryProtocolClient {
       },
     });
 
+    console.log(`📊 Memory API Response Status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`Memory API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`❌ Memory API Error Response: ${errorText}`);
+      throw new Error(`Memory API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    return await response.json() as FarcasterFollowersResponse;
+    const data = await response.json() as FarcasterFollowersResponse;
+    console.log(`📦 Memory API Response Data:`, JSON.stringify(data, null, 2));
+    
+    return data;
   }
 
   /**
@@ -53,14 +63,16 @@ export class MemoryProtocolClient {
         limit,
       });
 
-      if (!response.follows || response.follows.length === 0) {
+      if (!response.data?.follows || response.data.follows.length === 0) {
         break;
       }
 
-      allFollowers.push(...response.follows);
+      allFollowers.push(...response.data.follows);
 
-      // Stop if we've reached the cap or no more pages
-      if (allFollowers.length >= maxFollowers || !response.next_cursor) {
+      // Stop if we've reached the cap or there's no more data
+      // The API uses progress to indicate completion
+      if (allFollowers.length >= maxFollowers || 
+          (response.progress && response.progress.current >= response.progress.total)) {
         break;
       }
 
@@ -93,8 +105,8 @@ export class MemoryProtocolClient {
         return [];
       }
 
-      const data = await response.json() as { follows: FarcasterFollower[] };
-      return data.follows || [];
+      const data = await response.json() as FarcasterFollowersResponse;
+      return data.data?.follows || [];
     } catch (error) {
       console.error('Error fetching following:', error);
       return [];
@@ -109,5 +121,7 @@ export function createMemoryClient(): MemoryProtocolClient {
     throw new Error('MEMORY_PROTOCOL_API_TOKEN environment variable is required');
   }
 
+  console.log(`✅ Memory Protocol client initialized with token: ${token.substring(0, 15)}...`);
+  
   return new MemoryProtocolClient(token);
 }

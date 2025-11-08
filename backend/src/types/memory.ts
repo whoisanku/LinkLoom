@@ -15,8 +15,16 @@ export interface FarcasterFollower {
 }
 
 export interface FarcasterFollowersResponse {
-  follows: FarcasterFollower[];
-  next_cursor?: string;
+  status: string;
+  progress?: {
+    current: number;
+    total: number;
+  };
+  timestamp: string;
+  data: {
+    profile: any;
+    follows: FarcasterFollower[];
+  };
 }
 
 export interface FarcasterProfile {

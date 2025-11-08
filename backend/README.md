@@ -48,97 +48,6 @@ The server will start on `http://localhost:3001` with hot reload enabled.
 bun run start
 ```
 
-## API Endpoints
-
-### Health Check
-- **GET** `/health`
-- Returns server status
-
-```bash
-curl http://localhost:3001/health
-```
-
-### Topic Search
-- **POST** `/api/topic/search`
-- Find and rank Farcaster candidates by topic relevance
-
-#### How It Works
-
-1. **Seed Expansion**: Fetches followers from each Farcaster seed account
-2. **Pool Building**: Creates a candidate pool with seed overlap counts
-3. **Hydration**: Fetches full profiles for top candidates
-4. **Scoring**: Ranks by:
-   - **Seed Overlap** (50%): How many seeds follow this candidate
-   - **Keyword Match** (35%): Bio relevance to topic keywords
-   - **Credibility** (15%): Follower count (log scale)
-5. **Filtering**: Returns top 50 candidates passing thresholds
-
-#### Request Body:
-```json
-{
-  "seeds": {
-    "farcaster": ["zksync", "starkware"]
-  },
-  "topic": "zk developers in farcaster",
-  "negative": ["airdrops", "marketing"],
-  "thresholds": {
-    "minSeedFollows": 2,
-    "minScore": 0.6
-  },
-  "caps": {
-    "maxSeedFollowersPerSeed": 2000,
-    "hydrateTopK": 300
-  }
-}
-```
-
-**Parameters:**
-- `seeds.farcaster` (required): Array of Farcaster usernames to expand from
-- `topic` (required): Topic description (keywords extracted automatically)
-- `negative` (optional): Keywords to filter out (e.g., spam terms)
-- `thresholds` (optional): Minimum requirements
-  - `minSeedFollows`: Minimum number of seeds that must follow candidate (default: 2)
-  - `minScore`: Minimum relevance score 0-1 (default: 0.6)
-- `caps` (optional): Performance limits
-  - `maxSeedFollowersPerSeed`: Max followers to fetch per seed (default: 2000)
-  - `hydrateTopK`: Max candidates to score (default: 300)
-
-#### Response Example:
-```json
-{
-  "success": true,
-  "message": "Found 25 candidates matching topic",
-  "candidates": [
-    {
-      "fid": 12345,
-      "username": "zkdev.eth",
-      "displayName": "ZK Developer",
-      "bio": "Building zk-rollups on Ethereum. Interested in zero-knowledge proofs.",
-      "pfpUrl": "https://...",
-      "score": 0.85,
-      "why": {
-        "seeds": 3,
-        "keywordScore": 0.8,
-        "credibility": 0.75,
-        "followers": 1250
-      }
-    }
-  ],
-  "metadata": {
-    "totalCandidates": 1543,
-    "seedsUsed": ["zksync", "starkware"],
-    "topicKeywords": ["zk", "developers", "farcaster"]
-  }
-}
-```
-
-#### Test the API:
-```bash
-curl -X POST http://localhost:3001/api/topic/search \
-  -H "Content-Type: application/json" \
-  -d @example-request.json
-```
-
 ## Project Structure
 
 ```
@@ -159,6 +68,84 @@ backend/
 ├── tsconfig.json
 └── README.md
 ```
+
+## API Usage
+
+### Endpoint
+
+- **`POST /api/topic/search`**
+
+### Example Request
+
+When you want to find candidates related to a specific topic, you send a `POST` request with a body like this:
+
+```json
+{
+  "seeds": {
+    "farcaster": ["zksync", "starkware"]
+  },
+  "topic": "zk developers in farcaster",
+  "negative": ["airdrops", "marketing"],
+  "thresholds": {
+    "minSeedFollows": 1,
+    "minScore": 0.2
+  },
+  "caps": {
+    "maxSeedFollowersPerSeed": 2000,
+    "hydrateTopK": 300
+  }
+}
+```
+
+### Request Parameters Explained
+
+- **`seeds.farcaster`**: The starting point for your search. These are Farcaster users you already know are relevant to your topic.
+- **`topic`**: The subject you are interested in. The API will find users whose profiles are related to this topic.
+- **`negative`**: A list of keywords to exclude. If a user's bio contains any of these words, they will be filtered out. If you don't provide this, Gemini will generate a list for you.
+- **`thresholds`**:
+  - `minSeedFollows`: How many of your seed users a candidate must follow. A lower number (like `1`) will give you a wider, more diverse pool of candidates.
+  - `minScore`: The minimum relevance score a candidate needs to be included in the results. This is a value between `0` and `1`. A lower score will return more candidates.
+- **`caps`**:
+  - `maxSeedFollowersPerSeed`: Limits how many followers are fetched from each seed user to keep the process fast.
+  - `hydrateTopK`: The number of top candidates to send to Gemini for detailed analysis.
+
+### Example Response
+
+After processing your request, you will get a response like this:
+
+```json
+{
+    "success": true,
+    "message": "Found 33 candidates matching topic",
+    "candidates": [
+        {
+            "fid": 326438,
+            "username": "mrmosby",
+            "displayName": "MrMosby.base.eth",
+            "bio": "https://github.com/Mozzy59...",
+            "pfpUrl": "...",
+            "score": 0.339,
+            "why": {
+                "seeds": 1,
+                "keywordScore": 0,
+                "credibility": 1,
+                "followers": 1905
+            }
+        }
+    ],
+    "metadata": {
+        "totalCandidates": 1947,
+        "seedsUsed": ["zksync", "starkware"],
+        "topicKeywords": ["developers", "farcaster"]
+    }
+}
+```
+
+### Response Explained
+
+- **`candidates`**: An array of users who meet your criteria. Each candidate includes their profile information and a `score`.
+- **`score`**: The relevance score, calculated based on a weighted average of seed overlap (20%), keyword matches (50%), and credibility (30%).
+- **`why`**: A breakdown of the scoring, showing how many seeds the user follows, their keyword score, their credibility score (based on follower count), and their total number of followers.
 
 ## Scoring Algorithm
 
@@ -188,18 +175,6 @@ The API handles errors gracefully:
 - Invalid seeds: Skips and continues with valid ones
 - API failures: Returns partial results when possible
 - Missing profiles: Continues with available data
-
-## Performance Notes
-
-- Pagination is automatic for large follower lists
-- Caps prevent excessive API calls
-- Top-K filtering reduces AI validation costs
-- AI-powered bio filtering ensures high-quality results
-
-### API Usage Calculation
-
-For a typical search with 2 seeds, each having 2,000 followers:
-
 **Memory Protocol API Calls:**
 - Followers per seed: 2,000
 - API limit per request: 100

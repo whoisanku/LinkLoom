@@ -5,8 +5,8 @@
   "topic": "zk developers in farcaster",
   "negative": ["airdrops", "marketing"],
   "thresholds": {
-    "minSeedFollows": 3,
-    "minScore": 0.65
+    "minSeedFollows": 1,
+    "minScore": 0.2
   },
   "caps": {
     "maxSeedFollowersPerSeed": 2000,

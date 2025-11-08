@@ -76,7 +76,7 @@ export function rankByTopicScore(input: ScoringInput, thresholds: { minSeedFollo
   const cred = Math.min(1, Math.log10(input.fcFollowers + 10) / 3);
   
   // 4. Weighted final score
-  const score = 0.5 * seedOverlap + 0.35 * kw + 0.15 * cred;
+  const score = 0.2 * seedOverlap + 0.5 * kw + 0.3 * cred;
   
   // 5. Apply thresholds
   const passes = input.seedCount >= thresholds.minSeedFollows && score >= thresholds.minScore;

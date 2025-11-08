@@ -1,107 +1,131 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-let genAI: GoogleGenerativeAI | null = null;
-
-/**
- * Initialize Gemini AI client
- */
-export function initGemini(): GoogleGenerativeAI {
-  if (!genAI) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY environment variable is required');
-    }
-    genAI = new GoogleGenerativeAI(apiKey);
-  }
-  return genAI;
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  throw new Error('GEMINI_API_KEY environment variable is required');
 }
 
+// Initialize the Gemini client once and reuse it across the application.
+const genAI = new GoogleGenerativeAI(apiKey);
+
+// Configure the model to be used across all functions, ensuring consistency.
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
 /**
- * Check if a bio aligns with the target topic using Gemini 2.5 Flash
+ * Generate negative keywords for a topic using Gemini.
  */
-export async function checkBioAlignment(bio: string, topic: string): Promise<{ aligned: boolean; confidence: number; reason?: string }> {
+export async function generateNegativeKeywords(topic: string): Promise<string[]> {
   try {
-    // Skip empty bios
-    if (!bio || bio.trim().length === 0) {
-      return { aligned: false, confidence: 0, reason: 'Empty bio' };
-    }
+    const prompt = `Given the topic: "${topic}"
 
-    const genAI = initGemini();
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+Generate a list of negative keywords that should be filtered out when searching for relevant profiles. These are terms that indicate the person is NOT genuinely interested in the topic, but rather:
+- Marketing/promotional accounts
+- Spam/bot accounts
+- Generic community managers
+- Airdrop hunters
+- Unrelated interests
 
-    const prompt = `You are an expert at analyzing user profiles for relevance to specific topics.
-
-Topic: "${topic}"
-Bio: "${bio}"
-
-Does this bio indicate that the person is relevant to the topic? Consider:
-- Direct mentions of related technologies, concepts, or communities
-- Professional experience or interests that align
-- Active involvement in the topic area
-
-Respond in JSON format:
-{
-  "aligned": true/false,
-  "confidence": 0.0-1.0,
-  "reason": "brief explanation"
-}
-
-Be strict but fair. Only mark as aligned if there's clear relevance.`;
+Return ONLY a JSON array of 5-10 negative keywords, nothing else.
+Example: ["airdrop", "giveaway", "marketing", "community manager", "follow for follow"]`;
 
     const result = await model.generateContent(prompt);
     const response = result.response;
     const text = response.text();
 
-    // Parse JSON response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        aligned: parsed.aligned === true,
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
-        reason: parsed.reason || '',
-      };
+      console.log(`🚫 Generated negative keywords:`, parsed);
+      return parsed;
     }
 
-    // Fallback: simple keyword check
-    return { aligned: false, confidence: 0, reason: 'Failed to parse AI response' };
+    return ['airdrop', 'giveaway', 'marketing', 'community manager'];
   } catch (error) {
-    console.error('Error checking bio alignment:', error);
-    // On error, don't filter out (fail open)
-    return { aligned: true, confidence: 0.5, reason: 'Error during check' };
+    console.error('Error generating negative keywords:', error);
+    return ['airdrop', 'giveaway', 'marketing', 'community manager'];
   }
 }
 
 /**
- * Batch check multiple bios for alignment (with rate limiting)
+ * Bulk check profiles in chunks to provide progress updates.
  */
 export async function batchCheckBioAlignment(
-  candidates: Array<{ bio: string; id: string }>,
+  candidates: Array<{ bio: string; username: string; id: string }>,
   topic: string,
-  batchSize: number = 10
+  negativeKeywords: string[],
+  chunkSize: number = 100 // Process 100 candidates per API call
 ): Promise<Map<string, { aligned: boolean; confidence: number; reason?: string }>> {
   const results = new Map<string, { aligned: boolean; confidence: number; reason?: string }>();
 
-  // Process in batches to avoid rate limits
-  for (let i = 0; i < candidates.length; i += batchSize) {
-    const batch = candidates.slice(i, i + batchSize);
-    
-    const promises = batch.map(async (candidate) => {
-      const result = await checkBioAlignment(candidate.bio, topic);
-      return { id: candidate.id, result };
-    });
+  if (candidates.length === 0) {
+    return results;
+  }
 
-    const batchResults = await Promise.all(promises);
-    
-    for (const { id, result } of batchResults) {
-      results.set(id, result);
+  console.log(`🤖 Processing ${candidates.length} candidates in chunks of ${chunkSize}...`);
+
+  try {
+    for (let i = 0; i < candidates.length; i += chunkSize) {
+      const chunk = candidates.slice(i, i + chunkSize);
+      console.log(`📦 Processing chunk ${Math.floor(i / chunkSize) + 1}: ${chunk.length} candidates (${i + 1}-${i + chunk.length}/${candidates.length})`);
+
+      const candidatesList = chunk.map((c, idx) => 
+        `${idx + 1}. ID: ${c.id}\n   Username: @${c.username}\n   Bio: ${c.bio || 'N/A'}`
+      ).join('\n\n');
+
+      const systemInstruction = `You are an expert at analyzing user profiles for relevance. Respond ONLY with valid JSON arrays.`;
+
+      const userPrompt = `Task: Analyze ${chunk.length} Farcaster profiles for relevance to a topic.
+
+Topic: "${topic}"
+Negative keywords: ${negativeKeywords.join(', ')}
+
+PROFILES:
+${candidatesList}
+
+Return a JSON array for ALL ${chunk.length} profiles:
+[{"id": "123", "aligned": true, "confidence": 0.85, "reason": "brief"}, ...]`;
+
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        systemInstruction: { role: 'system', parts: [{ text: systemInstruction }] },
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const response = result.response;
+      const text = response.text();
+
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        for (const item of parsed) {
+          if (item.id) {
+            results.set(item.id, {
+              aligned: item.aligned === true,
+              confidence: typeof item.confidence === 'number' ? item.confidence : 0.5,
+              reason: item.reason || '',
+            });
+          }
+        }
+        console.log(`✅ Chunk complete: ${parsed.filter((p: any) => p.aligned).length}/${chunk.length} aligned`);
+      } else {
+        console.warn(`⚠️ Failed to parse response for chunk, marking all as aligned (fail-open)`);
+        for (const candidate of chunk) {
+          results.set(candidate.id, { aligned: true, confidence: 0.5, reason: 'Parse error' });
+        }
+      }
     }
-
-    // Small delay between batches
-    if (i + batchSize < candidates.length) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+  } catch (error) {
+    console.error('❌ Error during bulk processing:', error);
+    for (const candidate of candidates) {
+      if (!results.has(candidate.id)) {
+        results.set(candidate.id, { aligned: true, confidence: 0.5, reason: 'Error during processing' });
+      }
     }
   }
 
+  console.log(`🎉 Finished processing all chunks.`);
   return results;
 }
