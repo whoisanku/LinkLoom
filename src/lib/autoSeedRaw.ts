@@ -42,10 +42,10 @@ Return JSON only per schema.`;
   try { raw = JSON.parse(text); } catch {}
   if (!raw || typeof raw !== 'object') raw = {};
   if (!raw.seeds) raw.seeds = { farcaster: [], twitter: [] };
-  raw.seeds.farcaster = Array.isArray(raw.seeds.farcaster) ? raw.seeds.farcaster.slice(0, 8) : [];
+  raw.seeds.farcaster = Array.isArray(raw.seeds.farcaster) ? raw.seeds.farcaster.slice(0, 5) : [];
   raw.seeds.twitter   = Array.isArray(raw.seeds.twitter) ? raw.seeds.twitter.slice(0, 8) : [];
   if (Array.isArray(raw.candidates)) raw.candidates = raw.candidates.slice(0, 100);
-  if (!raw.thresholds) raw.thresholds = { minSeedFollows: 3, minScore: 0.65 };
+  if (!raw.thresholds) raw.thresholds = { minSeedFollows: 3, minScore: 0.3 };
   if (!raw.caps) raw.caps = { maxSeedFollowersPerSeed: 2000, hydrateTopK: 300 };
   if (!raw.normalized_keywords) raw.normalized_keywords = { positive: [], weak: [], negative: [] };
   if (!raw.topic) raw.topic = String(query || "");

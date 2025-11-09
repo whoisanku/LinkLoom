@@ -10,6 +10,11 @@ export default defineConfig({
   server: {
     allowedHosts: true,
     proxy: {
+      "/api": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        secure: false,
+      },
       "/garplet-jobs": {
         target: "http://localhost:5173",
         changeOrigin: true,
@@ -45,4 +50,5 @@ export default defineConfig({
    
   },
 })
+
 

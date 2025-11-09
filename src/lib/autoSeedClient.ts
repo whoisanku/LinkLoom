@@ -105,14 +105,14 @@ function finalizeSeedOutput(query: string, text: string): SeedOut {
   let raw: any = {};
   try { raw = JSON.parse(text); } catch {}
   raw = normalizeToSeedRaw(query, raw);
-  raw.seeds.farcaster = Array.isArray(raw.seeds?.farcaster) ? raw.seeds.farcaster.slice(0, 8) : [];
+  raw.seeds.farcaster = Array.isArray(raw.seeds?.farcaster) ? raw.seeds.farcaster.slice(0, 5) : [];
   raw.seeds.twitter   = Array.isArray(raw.seeds?.twitter) ? raw.seeds.twitter.slice(0, 8) : [];
   if (Array.isArray(raw.candidates)) raw.candidates = raw.candidates.slice(0, 100);
   const th = raw.thresholds ?? {};
   const cs = raw.caps ?? {};
   raw.thresholds = {
     minSeedFollows: Math.max(1, toInt(th.minSeedFollows, 3)),
-    minScore: clamp(th.minScore, 0, 1),
+    minScore: clamp(th.minScore ?? 0.3, 0, 1),
   };
   raw.caps = {
     maxSeedFollowersPerSeed: Math.max(200, Math.min(5000, toInt(cs.maxSeedFollowersPerSeed, 2000))),

@@ -3,11 +3,14 @@ import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import Search from './components/Search';
 import VoyageLoading from './components/VoyageLoading';
 import SeedEditor from './components/SeedEditor';
+import FinalCandidates from './components/FinalCandidates';
+import KeywordsEditor from './components/KeywordsEditor';
 import { ICONS } from '@/assets/icons/Icon';
 import Button from '@/components/ui/Button';
 import { autoSeed, refineSeedsWithEvidence } from '@/lib/autoSeedClient';
 import { gatherEvidenceForHandles } from '@/lib/farcasterValidation';
 import type { SeedOut } from '@/lib/seed-schema';
+import { fetchTopicCandidates, type TopicCandidate, type TopicSearchResponsePayload } from '@/lib/topicSearchClient';
 
 const resolveGeminiErrorMessage = (error: unknown, fallback: string) => {
   const raw = String((error as Error)?.message ?? error ?? '').toLowerCase();
@@ -17,6 +20,21 @@ const resolveGeminiErrorMessage = (error: unknown, fallback: string) => {
   }
   if (raw.includes('network') || raw.includes('failed to fetch')) {
     return 'Network hiccup during signal generation. Check your connection and retry.';
+  }
+  return fallback;
+};
+
+const resolveCandidateErrorMessage = (error: unknown, fallback: string) => {
+  const raw = String((error as Error)?.message ?? error ?? '').toLowerCase();
+  if (!raw) return fallback;
+  if (raw.includes('network')) {
+    return 'Cannot reach the candidate ranking backend. Make sure it is running and retry.';
+  }
+  if (raw.includes('timeout')) {
+    return 'Candidate ranking backend timed out. Try again shortly.';
+  }
+  if (raw.includes('502') || raw.includes('503')) {
+    return 'Candidate ranking backend is unavailable. Give it a moment and retry.';
   }
   return fallback;
 };
@@ -42,8 +60,15 @@ export default function LinkLoomApp() {
     farcaster: [],
     twitter: [],
   })
+  const [draftKeywords, setDraftKeywords] = useState<{ positive: string[]; weak: string[]; negative: string[] }>({
+    positive: [],
+    weak: [],
+    negative: [],
+  })
   const [isRefined, setIsRefined] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [finalCandidates, setFinalCandidates] = useState<TopicCandidate[]>([])
+  const [candidateMetadata, setCandidateMetadata] = useState<TopicSearchResponsePayload['metadata'] | null>(null)
 
   const handleSearchQuery = (data: string) => { setSearchQuery(data) }
 
@@ -60,6 +85,8 @@ export default function LinkLoomApp() {
       try {
         setErrorMessage(null)
         setSeeds(null)
+        setFinalCandidates([])
+        setCandidateMetadata(null)
         setExecutedQuery(trimmedQuery)
         const out = await autoSeed(trimmedQuery)
         if (!isCancelled) {
@@ -67,6 +94,11 @@ export default function LinkLoomApp() {
           setDraftSeeds({
             farcaster: [...out.seeds.farcaster],
             twitter: [...out.seeds.twitter],
+          })
+          setDraftKeywords({
+            positive: [...out.normalized_keywords.positive],
+            weak: [...out.normalized_keywords.weak],
+            negative: [...out.normalized_keywords.negative],
           })
           setIsRefined(false)
           scrollToTop()
@@ -95,9 +127,12 @@ export default function LinkLoomApp() {
     setSearchQuery('')
     setExecutedQuery('')
     setErrorMessage(null)
+    setFinalCandidates([])
+    setCandidateMetadata(null)
     setIsLoading(false)
     setIsRefined(false)
     setIsRefining(false)
+    setDraftKeywords({ positive: [], weak: [], negative: [] })
     scrollToTop()
   }
 
@@ -139,30 +174,96 @@ export default function LinkLoomApp() {
     })
   }
 
+  const handleKeywordChange = (type: 'positive' | 'weak' | 'negative', index: number, value: string) => {
+    setIsRefined(false)
+    setDraftKeywords((prev) => {
+      const next = { ...prev, [type]: [...prev[type]] } as typeof prev
+      next[type][index] = value
+      return next
+    })
+  }
+
+  const handleKeywordRemove = (type: 'positive' | 'weak' | 'negative', index: number) => {
+    setIsRefined(false)
+    setDraftKeywords((prev) => {
+      const next = { ...prev, [type]: prev[type].filter((_, i) => i !== index) } as typeof prev
+      return next
+    })
+  }
+
+  const handleKeywordAdd = (type: 'positive' | 'weak' | 'negative') => {
+    setIsRefined(false)
+    setDraftKeywords((prev) => {
+      const next = { ...prev, [type]: [...prev[type], ''] } as typeof prev
+      return next
+    })
+  }
+
+  const runCandidateSearch = useCallback(async (seedData: SeedOut, fallbackTopic: string) => {
+    const farcasterSeeds = Array.isArray(seedData.seeds?.farcaster)
+      ? seedData.seeds.farcaster.filter((handle) => Boolean(handle?.trim()))
+      : []
+    if (farcasterSeeds.length === 0) {
+      setFinalCandidates([])
+      setCandidateMetadata(null)
+      return
+    }
+
+    const response = await fetchTopicCandidates({
+      seeds: farcasterSeeds,
+      topic: seedData.topic || fallbackTopic,
+      negative: seedData.normalized_keywords?.negative ?? [],
+      thresholds: seedData.thresholds,
+      caps: seedData.caps,
+    })
+
+    setFinalCandidates(response.candidates ?? [])
+    setCandidateMetadata(response.metadata ?? null)
+  }, [])
+
   const handleConfirm = async () => {
     if (!seeds || isRefining) return
     setIsRefining(true)
-    setIsRefined(false)
     setErrorMessage(null)
     const query = executedQuery || searchQuery
     try {
-      const evidence = await gatherEvidenceForHandles(draftSeeds.farcaster)
-      const refined = await refineSeedsWithEvidence({
-        query,
-        roughSeed: seeds,
-        confirmedSeeds: draftSeeds,
-        evidence,
-      })
-      setSeeds(refined)
-      setDraftSeeds({
-        farcaster: [...refined.seeds.farcaster],
-        twitter: [...refined.seeds.twitter],
-      })
-      setIsRefined(true)
-      scrollToTop()
+      if (!isRefined) {
+        const evidence = await gatherEvidenceForHandles(draftSeeds.farcaster)
+        const refined = await refineSeedsWithEvidence({
+          query,
+          roughSeed: seeds,
+          confirmedSeeds: draftSeeds,
+          evidence,
+        })
+        setSeeds(refined)
+        setDraftSeeds({
+          farcaster: [...refined.seeds.farcaster],
+          twitter: [...refined.seeds.twitter],
+        })
+        setDraftKeywords({
+          positive: [...refined.normalized_keywords.positive],
+          weak: [...refined.normalized_keywords.weak],
+          negative: [...refined.normalized_keywords.negative],
+        })
+        setIsRefined(true)
+        scrollToTop()
+      } else {
+        const refinedForSearch: SeedOut = {
+          ...seeds,
+          normalized_keywords: {
+            ...seeds.normalized_keywords,
+            negative: draftKeywords.negative.filter(Boolean),
+          },
+        }
+        await runCandidateSearch(refinedForSearch, query)
+        scrollToTop()
+      }
     } catch (error) {
       console.error('refineSeeds failed', error)
-      setErrorMessage(resolveGeminiErrorMessage(error, 'Unable to validate Farcaster seeds right now. Try again shortly.'))
+      const message = String((error as Error)?.message ?? '').toLowerCase().includes('candidate search')
+        ? resolveCandidateErrorMessage(error, 'Candidate ranking service is unavailable. Ensure the backend is running and retry.')
+        : resolveGeminiErrorMessage(error, 'Unable to validate Farcaster seeds right now. Try again shortly.')
+      setErrorMessage(message)
     } finally {
       setIsRefining(false)
     }
@@ -182,7 +283,7 @@ export default function LinkLoomApp() {
     return [...farcasterList, ...twitterList]
   }, [draftSeeds])
 
-  const confirmLabel = isRefining ? 'Validating...' : isRefined ? 'Refine Again' : 'Confirm'
+  const confirmLabel = isRefining ? 'Validating...' : isRefined ? 'Run Search' : 'Confirm Seeds'
   const confirmIsSuccess = isRefined && !isRefining
 
   return (
@@ -254,6 +355,40 @@ export default function LinkLoomApp() {
                     onAdd={() => handleDraftAdd('twitter')}
                   />
                 </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                  <KeywordsEditor
+                    title="Positive Keywords"
+                    color="from-[#4ade8033]"
+                    type="positive"
+                    values={draftKeywords.positive}
+                    onChange={handleKeywordChange}
+                    onRemove={handleKeywordRemove}
+                    onAdd={() => handleKeywordAdd('positive')}
+                  />
+                  <KeywordsEditor
+                    title="Weak Keywords"
+                    color="from-[#a78bfa33]"
+                    type="weak"
+                    values={draftKeywords.weak}
+                    onChange={handleKeywordChange}
+                    onRemove={handleKeywordRemove}
+                    onAdd={() => handleKeywordAdd('weak')}
+                  />
+                  <KeywordsEditor
+                    title="Negative Keywords"
+                    color="from-[#f8717133]"
+                    type="negative"
+                    values={draftKeywords.negative}
+                    onChange={handleKeywordChange}
+                    onRemove={handleKeywordRemove}
+                    onAdd={() => handleKeywordAdd('negative')}
+                  />
+                </div>
+                
+                {finalCandidates.length > 0 && (
+                  <FinalCandidates candidates={finalCandidates} metadata={candidateMetadata} />
+                )}
 
                 {combinedDraftList.length > 0 && (
                   <>

@@ -9,7 +9,7 @@ export const SeedZ = z.object({
     negative: z.array(z.string()).default([]),
   }),
   seeds: z.object({
-    farcaster: z.array(z.string()).max(8).default([]),
+    farcaster: z.array(z.string()).max(5).default([]),
     twitter: z.array(z.string()).max(8).default([]),
   }),
   candidates: z.array(z.object({
@@ -21,7 +21,7 @@ export const SeedZ = z.object({
   })).default([]),
   thresholds: z.object({
     minSeedFollows: z.number().int().min(1).default(3),
-    minScore: z.number().min(0).max(1).default(0.65),
+    minScore: z.number().min(0).max(1).default(0.3),
   }),
   caps: z.object({
     maxSeedFollowersPerSeed: z.number().int().min(200).max(5000).default(2000),
@@ -46,7 +46,7 @@ export const SeedSchema: Schema = ({
     seeds: {
       type: SchemaType.OBJECT,
       properties: {
-        farcaster: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, maxItems: 8 },
+        farcaster: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, maxItems: 5 },
         twitter:   { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, maxItems: 8 },
       },
       required: ["farcaster","twitter"]
@@ -102,7 +102,7 @@ Constraints:
 - Handles must be usernames without @.
 - Farcaster usernames must exclude suffixes like ".eth", ".base.eth", ".farcaster", ".warpcast" (use only the root handle).
 - Prefer orgs/labs/foundations; include a few key maintainers if essential.
-- Keep seeds small but high-quality: up to 8 per platform.
+- Keep seeds small but high-quality: up to 5 for Farcaster and up to 8 for Twitter.
 - If unsure about a handle, put it in candidates with low confidence and do not include in seeds.
 - Do not use alternative key names like keywords, seed_accounts, twitter_x, or nested objects for platforms.
 `;
