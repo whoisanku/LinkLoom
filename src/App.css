@@ -9,6 +9,9 @@
   --color-primary: #242e38;
   --color-secondary: #36a5ff;
   --color-gray: #8a98a6;
+
+  --color-overlay: rgba(0, 0, 0, 0.8);
+  --color-modal-background: #0b0b0f;
 }
 
 
@@ -134,5 +137,44 @@
     opacity: 0;
     filter: blur(16px);
     letter-spacing: 1.2em;
+  }
+}
+
+/* Orbiting magnifying glass loader */
+.voyage-magnifier-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-secondary);
+  pointer-events: none;
+}
+
+.voyage-orbit {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  animation: voyage-orbit 2.8s linear infinite;
+  opacity: 0.95;
+}
+
+.voyage-magnifier {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 6px rgba(54, 165, 255, 0.35));
+  animation: voyage-counter-orbit 2.8s linear infinite;
+}
+
+@keyframes voyage-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes voyage-counter-orbit {
+  to {
+    transform: translate(-50%, -50%) rotate(-360deg);
   }
 }

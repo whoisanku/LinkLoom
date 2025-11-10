@@ -69,17 +69,27 @@ const VoyageLoading = ({ query }: VoyageLoadingProps) => {
           <span
             key={`${text}-${index}`}
             className="voyage-word"
-            style={{
-              '--voyage-offset': `${offset}px`,
-              animationDelay: `${delay}s`,
-              animationDuration: `${duration}s`,
-            } as CSSProperties & {
-              '--voyage-offset': string
-            }}
+            style={
+              {
+                '--voyage-offset': `${offset}px`,
+                animationDelay: `${delay}s`,
+                animationDuration: `${duration}s`,
+              } as CSSProperties & {
+                '--voyage-offset': string
+              }
+            }
           >
             {text}
           </span>
         ))}
+      </div>
+      <div className="voyage-magnifier-wrap" aria-label="Loading">
+        <div className="voyage-orbit">
+          <svg className="voyage-magnifier" width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="6" stroke="currentColor" strokeWidth="2" opacity="0.9" />
+            <line x1="14.5" y1="14.5" x2="20" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
       </div>
     </div>
   )

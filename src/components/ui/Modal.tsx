@@ -1,5 +1,6 @@
 
 import { type ReactNode, useState, type JSX } from 'react'
+import { createPortal } from 'react-dom'
 
 export interface ModalType {
   trigger: ReactNode
@@ -34,8 +35,7 @@ const Modal = ({ trigger, children, open: controlledOpen, onOpenChange }: ModalT
   return (
     <>
       <div onClick={handleOpen}>{trigger}</div>
-
-      {isOpen && (
+      {isOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay" onClick={handleBackdropClick}>
           <div className="relative bg-modal-background rounded-lg shadow-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <button
@@ -50,7 +50,8 @@ const Modal = ({ trigger, children, open: controlledOpen, onOpenChange }: ModalT
 
             <div className="p-6">{children}</div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

@@ -1,63 +1,59 @@
-import { useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useCallback, type Dispatch, type SetStateAction } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { CONSTANTS } from '../constant/data.const'
 import TextField from '@/components/ui/TextField'
-import type { TMode } from '../type/data';
-import Heading from '@/components/ui/Typography';
-import { ICONS } from '@/assets/icons/Icon';
-import Button from '@/components/ui/Button';
+import type { TMode } from '../type/data'
+import Heading from '@/components/ui/Typography'
+import { ICONS } from '@/assets/icons/Icon'
+import Button from '@/components/ui/Button'
 
 type SearchProps = {
-  type: TMode,
+  type: TMode
   getSearchQuery: (value: string) => void
-  isLoading: boolean,
+  isLoading: boolean
   setIsLoading: Dispatch<SetStateAction<boolean>>
-};
+}
 
 const Search = ({ type, getSearchQuery, isLoading, setIsLoading }: SearchProps) => {
-
   const methods = useForm<{ search: string }>({
     defaultValues: { search: '' },
   })
 
-  const searchValue = methods.watch('search');
+  const searchValue = methods.watch('search')
 
-  const handleSearch = useCallback((value: string) => {
-    getSearchQuery(value);
-  }, [getSearchQuery]);
+  const handleSearch = useCallback(
+    (data: { search: string }) => {
+      getSearchQuery(data.search)
+    },
+    [getSearchQuery],
+  )
 
   const placeholder =
-    type === 'introducer'
-      ? CONSTANTS.SEARCH.PLACEHOLDER.INTRODUCER
-      : CONSTANTS.SEARCH.PLACEHOLDER.TARGET;
+    type === 'introducer' ? CONSTANTS.SEARCH.PLACEHOLDER.INTRODUCER : CONSTANTS.SEARCH.PLACEHOLDER.TARGET
 
   useEffect(() => {
     if (!searchValue || searchValue.trim().length === 0) {
-      handleSearch('');
-      return;
+      handleSearch({ search: '' })
+      return
     }
 
-    if (searchValue.trim().length < 3) return;
+    if (searchValue.trim().length < 3) return
 
-    handleSearch(searchValue);
-  }, [searchValue, handleSearch]);
-
+    handleSearch({ search: searchValue })
+  }, [searchValue, handleSearch])
 
   const searchIcon = (
-    <div className='text-xl p-1.5 mx-auto my-auto rounded-full border-0 bg-white text-black font-bold'>
+    <div className="text-xl p-1.5 mx-auto my-auto rounded-full border-0 bg-white text-black font-bold">
       {ICONS.search}
     </div>
   )
 
   return (
     <div className="relative flex flex-col gap-4 w-full">
-      <Heading variant={'h2'} title={CONSTANTS.TITLE.SEARCH} color='white' className='justify-center text-center' />
+      <Heading variant={'h2'} title={CONSTANTS.TITLE.SEARCH} color="white" className="justify-center text-center" />
       <div className="flex flex-col gap-3">
         <FormProvider {...methods}>
-          <form
-            onSubmit={(event) => event.preventDefault()}
-            autoComplete="off"
-          >
+          <form onSubmit={(e) => e.preventDefault()} autoComplete="off">
             <div className="w-full flex rounded-full bg-primary">
               <TextField
                 name="search"
@@ -74,7 +70,7 @@ const Search = ({ type, getSearchQuery, isLoading, setIsLoading }: SearchProps) 
               {searchValue ? (
                 <Button
                   type="button"
-                  className='rounded-full'
+                  className="rounded-full"
                   onClick={() => setIsLoading(true)}
                   disabled={isLoading || searchValue.trim().length < 3}
                   loading={isLoading}
