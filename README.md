@@ -2,6 +2,9 @@
 
 LinkLoom is our hackathon project submission: a networking copilot that helps founders (and the teams that support them) discover the right people based on what they build, start warm conversations, and swipe through alternatives when a match is not the vibe. The project stitches together a React front end for drafting and validating "seed" accounts with a TypeScript/Hono API that cross-references Farcaster social graphs, applies Gemini 2.5 Flash for semantic filtering, and returns an explainable ranking.
 
+<img width="392" height="560" alt="Screenshot 2025-11-11 at 18 50 42" src="https://github.com/user-attachments/assets/0749d04d-633e-40bc-bb62-e43b14938159" />
+
+
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)
 2. [Frontend Experience](#frontend-experience)
