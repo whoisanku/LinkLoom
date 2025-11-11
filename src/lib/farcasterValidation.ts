@@ -17,7 +17,7 @@ export type FarcasterSeedEvidence = {
   endpoints: Record<Endpoint, FarcasterEndpointResult>;
 };
 
-const BASE_URL = import.meta.env?.DEV ? "/fc/v2" : "https://client.farcaster.xyz/v2";
+const BASE_URL = "/fc/v2";
 
 function buildUrl(endpoint: Endpoint, query: string): string {
   const encodedQuery = encodeURIComponent(query);
