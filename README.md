@@ -20,20 +20,27 @@ LinkLoom is intentionally split into independent frontend and backend workspaces
 
 ```mermaid
 graph LR
-  subgraph Frontend (Vite + React + Tailwind)
+  subgraph Frontend
+    direction TB
     UI[LinkLoom UI]
     Seeds[Seed Drafting & Validation]
     Swipe[Tinder-style Review]
+    FrontendStack((Vite · React · Tailwind))
+    FrontendStack -.-> UI
   end
 
-  subgraph Backend (Hono API)
+  subgraph Backend
+    direction TB
     Endpoint[/POST /api/topic/search/]
     MemoryClient[Memory Protocol Client]
     Scoring[Relevance Scoring]
     Gemini[Gemini 2.5 Flash]
+    BackendStack((Hono · Node 18 · TSX))
+    BackendStack -.-> Endpoint
   end
 
-  subgraph External APIs
+  subgraph External_APIs[External APIs]
+    direction TB
     MemoryAPI[Memory Protocol]
     FarcasterAPI[Farcaster Public API]
   end
