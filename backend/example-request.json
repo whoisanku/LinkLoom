@@ -1,15 +1,30 @@
 {
   "seeds": {
-    "farcaster": ["zksync", "starkware"]
+    "farcaster": [
+      "zksync",
+      "starknet",
+      "zama",
+      "risc-zero",
+      "linea"
+    ]
   },
-  "topic": "zk developers in farcaster",
-  "negative": ["airdrops", "marketing"],
+  "topic": "zk developer",
+  "negative": [
+    "trading",
+    "investment",
+    "price",
+    "meme",
+    "financial advice",
+    "crypto update",
+    "speculation",
+    "tokenomics"
+  ],
   "thresholds": {
-    "minSeedFollows": 1,
-    "minScore": 0.2
+    "minSeedFollows": 2,
+    "minScore": 0.3
   },
   "caps": {
     "maxSeedFollowersPerSeed": 2000,
-    "hydrateTopK": 300
+    "hydrateTopK": 100
   }
 }
