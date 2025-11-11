@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { TIntroducer, TTarget } from '../type/data';
 import { INTRODUCER_DATA } from '../constant/tableData.const'; // adjust path as needed
+import { useTarget } from './useTarget';
 
 export const useIntroducer = () => {
   const [introducers, setIntroducers] = useState<TIntroducer[]>(INTRODUCER_DATA);
@@ -126,18 +127,20 @@ export const useNetworking = () => {
     const totalIntroducers = introducerHook.introducers.length;
     const totalTargets = targetHook.targets.length;
     const totalConnections = introducerHook.introducers.reduce(
-      (sum, intro) => sum + intro.connections.length,
+      (sum: number, intro: TIntroducer) => sum + intro.connections.length,
       0
     );
     const avgConnectionsPerIntroducer = totalConnections / totalIntroducers;
-    const avgIntroducerScore = introducerHook.introducers.reduce(
-      (sum, intro) => sum + intro.score,
-      0
-    ) / totalIntroducers;
-    const avgTargetScore = targetHook.targets.reduce(
-      (sum, target) => sum + target.score,
-      0
-    ) / totalTargets;
+    const avgIntroducerScore =
+      introducerHook.introducers.reduce(
+        (sum: number, intro: TIntroducer) => sum + intro.score,
+        0
+      ) / totalIntroducers;
+    const avgTargetScore =
+      targetHook.targets.reduce(
+        (sum: number, target: TTarget) => sum + target.score,
+        0
+      ) / totalTargets;
 
     return {
       totalIntroducers,

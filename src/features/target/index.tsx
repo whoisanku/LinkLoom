@@ -1,6 +1,5 @@
 import Page from '@/components/ui/Page';
 import Title from './components/Title';
-import { CONSTANTS } from './constant/data.const';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTarget } from './hooks/useTarget';
 import { useIntroducer } from './hooks/useIntroducer';

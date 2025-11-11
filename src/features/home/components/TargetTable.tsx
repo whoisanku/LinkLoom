@@ -6,11 +6,11 @@ import Search from './Search'
 import Title from './Title'
 import { useTarget } from '../hooks/useTarget'
 import { useMemo, useState, useCallback } from 'react'
-import Button from '@/components/ui/Button'
 
 const TargetTable = () => {
   const { targets, searchTargets } = useTarget() // Use targets directly
   const [searchQuery, setSearchQuery] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const filteredTargets = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -22,6 +22,7 @@ const TargetTable = () => {
   const handleSearchQuery = useCallback((query: string) => {
     console.log(query, 'query')
     setSearchQuery(query)
+    setIsLoading(false)
   }, [])
 
   const columns: ColumnDef<TTarget>[] = useMemo(
@@ -60,7 +61,7 @@ const TargetTable = () => {
   return (
     <div className="flex flex-col gap-2">
       <Title mainheading={CONSTANTS.TITLE.MAIN_HEADING.TARGET} subHeading={CONSTANTS.TITLE.SUB_HEADING.TARGET} />
-      <Search type={'target'} getSearchQuery={handleSearchQuery} />
+      <Search type={'target'} getSearchQuery={handleSearchQuery} isLoading={isLoading} setIsLoading={setIsLoading} />
       <Table
         data={filteredTargets}
         rowClassName="cursor-pointer hover:bg-gray-800 transition-colors"

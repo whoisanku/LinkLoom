@@ -1,6 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
 import Dropdown from './Dropdown'
-import Heading from './Typography'
 import type { TabsProps } from '@/types/components'
 
 export const Tabs = ({ tabs }: { tabs: TabsProps }) => {

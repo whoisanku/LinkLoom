@@ -4,8 +4,10 @@ import type { ColumnDef } from '@tanstack/react-table'
 import type { TIntroducer } from '@features/home/type/data'
 import Title from './Title'
 import Search from './Search'
+import { useState } from 'react'
 
 const IntroducerTable = ({ data }: { data: TIntroducer[] }) => {
+  const [isLoading, setIsLoading] = useState(false)
   const columns: ColumnDef<TIntroducer>[] = [
     {
       accessorKey: 'username',
@@ -41,7 +43,15 @@ const IntroducerTable = ({ data }: { data: TIntroducer[] }) => {
 
       <Title mainheading={CONSTANTS.TITLE.MAIN_HEADING.INTRODUCER} subHeading={CONSTANTS.TITLE.SUB_HEADING.INTRODUCER} />
 
-      <Search type={'introducer'} getSearchQuery={(data) => console.log(data)} />
+      <Search
+        type={'introducer'}
+        getSearchQuery={(data) => {
+          console.log(data)
+          setIsLoading(false)
+        }}
+        isLoading={isLoading}
+        setIsLoading={setIsLoading}
+      />
 
       <Table data={data} columns={columns} />
     </div>

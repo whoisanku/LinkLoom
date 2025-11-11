@@ -1,12 +1,9 @@
 import Table from '@ui/Table'
-import { CONSTANTS } from '@features/home/constant/data.const'
 import type { ColumnDef } from '@tanstack/react-table'
 import type { TTarget } from '@features/home/type/data'
 import Search from './Search'
-import Title from './Title'
 import { useTarget } from '../hooks/useTarget'
 import { useMemo, useState, useCallback } from 'react'
-import Button from '@/components/ui/Button'
 
 const TargetTable = () => {
   const { targets, searchTargets } = useTarget() // Use targets directly
