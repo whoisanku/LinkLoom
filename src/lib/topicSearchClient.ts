@@ -49,16 +49,11 @@ export async function fetchTopicCandidates(
     ? payload.seeds.filter((h) => Boolean(h && String(h).trim())).slice(0, 5)
     : [];
 
-  const minSeedFollowsRaw = Number(
-    (payload.thresholds && payload.thresholds.minSeedFollows),
-  );
-  const minScore =
-    (payload.thresholds && payload.thresholds.minScore) ?? 0.3;
-  const defaultMin = farcasterSeeds.length > 0 ? Math.ceil(farcasterSeeds.length / 2) : 0;
-  const baseMin = Number.isFinite(minSeedFollowsRaw) ? minSeedFollowsRaw : defaultMin;
-  const minSeedFollows = farcasterSeeds.length > 0
-    ? Math.max(1, Math.min(farcasterSeeds.length, baseMin))
+  const minScore = 0.3;
+  const dynamicMin = farcasterSeeds.length > 0
+    ? Math.max(1, Math.min(farcasterSeeds.length, Math.floor(farcasterSeeds.length / 2)))
     : 0;
+  const minSeedFollows = dynamicMin;
 
   const caps = {
     maxSeedFollowersPerSeed: 2000,

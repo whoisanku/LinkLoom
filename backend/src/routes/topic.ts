@@ -53,8 +53,22 @@ topic.post('/search', async (c) => {
     }
 
     // Default thresholds and caps
-    const thresholds = body.thresholds || { minSeedFollows: 2, minScore: 0.6 };
+    const seedCount = body.seeds.farcaster.length;
+    const requestedMinSeeds = body.thresholds?.minSeedFollows;
+    const minScore = body.thresholds?.minScore ?? 0.3;
+    const dynamicMinSeedFollows = seedCount > 0
+      ? Math.max(1, Math.min(seedCount, Math.floor(seedCount / 2)))
+      : 1;
+    const thresholds = {
+      minSeedFollows: Number.isFinite(requestedMinSeeds as number)
+        ? Math.max(1, Math.min(seedCount, Number(requestedMinSeeds)))
+        : dynamicMinSeedFollows,
+      minScore,
+    };
     const caps = body.caps || { maxSeedFollowersPerSeed: 2000, hydrateTopK: 300 };
+    const startedAt = Date.now();
+    const BUDGET_MS = Number(process.env.TOPIC_SEARCH_BUDGET_MS || 60000);
+    const MAX_RETURN = Math.max(5, Math.min(100, Number(process.env.TOPIC_SEARCH_MAX_RETURN || 30)));
 
     // Step 1: Build candidate pool from Farcaster seeds with full profile data
     const pool = new Map<string, { profile: any; seedCount: number }>();
@@ -81,6 +95,9 @@ topic.post('/search', async (c) => {
         console.error(`❌ Error fetching followers for ${seed}:`, error);
         // Continue with other seeds
       }
+      if (Date.now() - startedAt > BUDGET_MS * 0.5) {
+        break;
+      }
     }
 
     console.log(`🎯 Total unique candidates in pool: ${pool.size}`);
@@ -104,12 +121,26 @@ topic.post('/search', async (c) => {
       username: c.profile.username || '',
     }));
 
-    const bioAlignmentResults = await batchCheckBioAlignment(candidatesForAI, body.topic, negativeKeywords);
-    
-    const aiFilteredCandidates = topCandidates.filter(c => {
-      const alignment = bioAlignmentResults.get(c.profile.id);
-      return alignment?.aligned === true;
-    });
+    let bioAlignmentResults: Map<string, { aligned: boolean; confidence: number; reason?: string }> = new Map();
+    let aiFilteredCandidates = topCandidates;
+    const timeSpent = Date.now() - startedAt;
+    if (timeSpent <= BUDGET_MS * 0.7) {
+      const remaining = Math.max(5000, BUDGET_MS - (Date.now() - startedAt) - 2000);
+      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), remaining));
+      const result = await Promise.race([
+        batchCheckBioAlignment(candidatesForAI, body.topic, negativeKeywords),
+        timeout,
+      ]);
+      if (result && result instanceof Map) {
+        bioAlignmentResults = result as Map<string, { aligned: boolean; confidence: number; reason?: string }>;
+        aiFilteredCandidates = topCandidates.filter(c => {
+          const alignment = bioAlignmentResults.get(c.profile.id);
+          return alignment?.aligned === true;
+        });
+      } else {
+        aiFilteredCandidates = topCandidates;
+      }
+    }
 
     console.log(`✅ ${aiFilteredCandidates.length}/${topCandidates.length} candidates passed AI bio filter`);
 
@@ -145,6 +176,9 @@ topic.post('/search', async (c) => {
 
         if (scored.passes) {
           scoredCandidates.push(candidateData);
+          if (scoredCandidates.length >= MAX_RETURN) {
+            break;
+          }
         } else {
           failedCount++;
           if (failedCount <= 3) {
@@ -159,17 +193,14 @@ topic.post('/search', async (c) => {
 
     console.log(`📊 Scoring results: ${scoredCandidates.length} passed, ${failedCount} failed (threshold: ${thresholds.minScore}, minSeeds: ${thresholds.minSeedFollows})`);
 
-    // Step 5: Sort by score and return top 50
+    // Step 5: Sort by score and return up to MAX_RETURN
     scoredCandidates.sort((a, b) => b.score - a.score);
-    let finalCandidates = scoredCandidates.slice(0, 50);
+    let finalCandidates = scoredCandidates.slice(0, MAX_RETURN);
 
-    // Always return minimum 2 candidates even if they don't meet thresholds
-    if (finalCandidates.length < 2 && aiFilteredCandidates.length >= 2) {
-      console.log(`⚠️ Only ${finalCandidates.length} candidates passed thresholds, adding top 2 by score...`);
-      
-      // Get all candidates with scores (even those that failed thresholds)
+    if (finalCandidates.length < 5) {
+      const source = aiFilteredCandidates.length > 0 ? aiFilteredCandidates : topCandidates;
       const allScoredCandidates: Candidate[] = [];
-      for (const candidate of aiFilteredCandidates.slice(0, 10)) {
+      for (const candidate of source.slice(0, Math.min(50, source.length))) {
         try {
           const profile = candidate.profile;
           const scored = rankByTopicScore(
@@ -182,7 +213,6 @@ topic.post('/search', async (c) => {
             },
             thresholds
           );
-
           allScoredCandidates.push({
             fid: parseInt(profile.id),
             username: profile.username,
@@ -192,14 +222,11 @@ topic.post('/search', async (c) => {
             score: scored.score,
             why: scored.why,
           });
-        } catch (error) {
-          // Skip on error
-        }
+        } catch {}
       }
-
       allScoredCandidates.sort((a, b) => b.score - a.score);
-      finalCandidates = allScoredCandidates.slice(0, 2);
-      console.log(`✅ Returning top 2 candidates by score (may not meet thresholds)`);
+      finalCandidates = allScoredCandidates.slice(0, Math.min(5, allScoredCandidates.length));
+      console.log(`✅ Returning top ${finalCandidates.length} candidates by score as fallback`);
     }
 
     console.log(`✨ Returning ${finalCandidates.length} qualified candidates`);

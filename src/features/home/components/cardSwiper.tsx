@@ -1,71 +1,25 @@
-import { useState, useRef } from 'react'
-import { Heart, X, Star, MapPin, Briefcase, GraduationCap } from 'lucide-react'
-import Heading from '@/components/ui/Typography'
+import { useState, useRef, useEffect } from 'react'
+import { Heart, X, Star } from 'lucide-react'
+import type { TinderProfile } from '@/lib/farcasterValidation'
 
-const profiles = [
-  {
-    id: 1,
-    name: 'Sarah',
-    age: 28,
-    distance: '3 miles away',
-    mainImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=800&fit=crop',
-    bio: 'Adventure seeker 🌄 | Coffee addict ☕ | Dog mom 🐕',
-    job: 'Product Designer at Tech Co',
-    education: 'NYU, Class of 2018',
-    interests: ['Photography', 'Hiking', 'Travel', 'Coffee'],
-    gallery: [
-      'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=800&fit=crop',
-      'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600&h=800&fit=crop',
-      'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=600&h=800&fit=crop',
-    ],
-    passions: ['Travel', 'Art', 'Fitness', 'Cooking', 'Music', 'Photography'],
-  },
-  {
-    id: 2,
-    name: 'Emma',
-    age: 26,
-    distance: '5 miles away',
-    mainImage: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=800&fit=crop',
-    bio: 'Yoga instructor 🧘‍♀️ | Plant based 🌱 | Beach lover 🏖️',
-    job: 'Yoga Instructor',
-    education: 'UCLA, Class of 2020',
-    interests: ['Yoga', 'Meditation', 'Cooking', 'Reading'],
-    gallery: [
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=800&fit=crop',
-      'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=600&h=800&fit=crop',
-      'https://images.unsplash.com/photo-1476900543704-4312b78632f8?w=600&h=800&fit=crop',
-    ],
-    passions: ['Wellness', 'Nature', 'Sustainability', 'Mindfulness'],
-  },
-  {
-    id: 3,
-    name: 'Olivia',
-    age: 30,
-    distance: '2 miles away',
-    mainImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&h=800&fit=crop',
-    bio: 'Bookworm 📚 | Wine enthusiast 🍷 | Weekend explorer',
-    job: 'Marketing Manager',
-    education: 'Columbia University',
-    interests: ['Reading', 'Wine tasting', 'Museums', 'Theater'],
-    gallery: [
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&h=800&fit=crop',
-      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600&h=800&fit=crop',
-      'https://images.unsplash.com/photo-1522556189639-b150ed9c4330?w=600&h=800&fit=crop',
-    ],
-    passions: ['Literature', 'Culture', 'Food', 'Travel', 'Art'],
-  },
-]
-
-export default function TinderSwipeCard() {
+export default function TinderSwipeCard({ profiles }: { profiles: TinderProfile[] }) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [cards, setCards] = useState(profiles)
+  const [cards, setCards] = useState<TinderProfile[]>(profiles)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [dragCurrent, setDragCurrent] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   const [isScrolling, setIsScrolling] = useState(false)
   const cardRef = useRef(null)
-  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    setCards(profiles)
+    setCurrentIndex(0)
+    setDragCurrent({ x: 0, y: 0 })
+    setScrollY(0)
+    setIsDragging(false)
+    setIsScrolling(false)
+  }, [profiles])
 
   const currentProfile = cards[currentIndex]
 
@@ -113,11 +67,17 @@ export default function TinderSwipeCard() {
   }
 
   const animateSwipe = (direction: 'left' | 'right' | 'up') => {
+    if (!cards || cards.length === 0) return
     const flyOut = direction === 'right' ? 1000 : -1000
     setDragCurrent({ x: flyOut, y: 0 })
 
     setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % cards.length)
+      setCurrentIndex((prev) => {
+        const len = cards.length
+        if (len === 0) return 0
+        const next = prev + 1
+        return next >= len ? 0 : next
+      })
       setDragCurrent({ x: 0, y: 0 })
       setScrollY(0)
     }, 300)
@@ -137,16 +97,11 @@ export default function TinderSwipeCard() {
   const opacity = 1 - Math.abs(dragCurrent.x) / 500
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
+    <div className="flex items-center justify-center p-4">
       <div className="relative w-full max-w-md">
         {/* Card Stack Effect */}
-        <Heading
-          variant={'h2'}
-          title={
-            'this file is in feature/home/index.tsx near the end. called, tinderSwipeCard.tsx. Move this to where you need it.'
-          }
-        />
-        <div className="relative" style={{ height: '600px' }}>
+        
+        <div className="relative" style={{ height: '440px' }}>
           {cards.slice(currentIndex, currentIndex + 3).map((profile, idx) => (
             <div
               key={profile.id}
@@ -161,7 +116,7 @@ export default function TinderSwipeCard() {
               {idx === 0 && (
                 <div
                   ref={cardRef}
-                  className="relative w-full h-full bg-white rounded-3xl shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing"
+                  className="relative w-full h-auto bg-transparent rounded-3xl shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing"
                   style={{
                     transform: `translateX(${dragCurrent.x}px) translateY(${dragCurrent.y}px) rotate(${rotation}deg)`,
                     opacity: opacity,
@@ -177,99 +132,43 @@ export default function TinderSwipeCard() {
                 >
                   {/* Main Image */}
                   <div
-                    className="relative h-full overflow-hidden"
+                    className="relative overflow-hidden"
                     style={{
                       transform: `translateY(-${scrollY}px)`,
                       transition: isDragging && isScrolling ? 'none' : 'transform 0.3s ease',
                     }}
                   >
-                    <div className="relative h-96">
+                    <div className="relative h-[400px]">
                       <img
                         src={profile.mainImage}
                         alt={profile.name}
                         className="w-full h-full object-cover"
                         draggable="false"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-linear-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                      {(typeof profile.score === 'number' || typeof profile.seedFollows === 'number') && (
+                        <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                          {typeof profile.seedFollows === 'number' && (
+                            <div className="rounded-full border border-white/20 bg-black/70 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm">
+                              seeds {profile.seedFollows}
+                            </div>
+                          )}
+                          {typeof profile.score === 'number' && (
+                            <div className="rounded-full border border-white/20 bg-black/70 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm">
+                              {Math.round(profile.score * 100)}%
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Basic Info Overlay */}
                       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                         <h2 className="text-4xl font-bold mb-1">
-                          {profile.name}, {profile.age}
+                          {profile.name}
+                          {profile.age ? `, ${profile.age}` : ''}
                         </h2>
-                        <div className="flex items-center gap-1 text-sm">
-                          <MapPin size={16} />
-                          <span>{profile.distance}</span>
-                        </div>
                         <p className="mt-2 text-sm">{profile.bio}</p>
-                      </div>
-                    </div>
-
-                    {/* Expanded Content */}
-                    <div className="bg-white p-6 space-y-6">
-                      {/* About */}
-                      <div>
-                        <h3 className="text-xl font-bold mb-3">About {profile.name}</h3>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3">
-                            <Briefcase size={20} className="text-gray-600" />
-                            <span className="text-gray-700">{profile.job}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <GraduationCap size={20} className="text-gray-600" />
-                            <span className="text-gray-700">{profile.education}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <MapPin size={20} className="text-gray-600" />
-                            <span className="text-gray-700">{profile.distance}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Interests */}
-                      <div>
-                        <h3 className="text-xl font-bold mb-3">Interests</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {profile.interests.map((interest, idx) => (
-                            <span
-                              key={idx}
-                              className="px-4 py-2 bg-pink-50 text-pink-600 rounded-full text-sm font-medium"
-                            >
-                              {interest}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Passions */}
-                      <div>
-                        <h3 className="text-xl font-bold mb-3">Passions</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {profile.passions.map((passion, idx) => (
-                            <span
-                              key={idx}
-                              className="px-4 py-2 bg-purple-50 text-purple-600 rounded-full text-sm font-medium border border-purple-200"
-                            >
-                              {passion}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Photo Gallery */}
-                      <div>
-                        <h3 className="text-xl font-bold mb-3">More Photos</h3>
-                        <div className="grid grid-cols-3 gap-2">
-                          {profile.gallery.map((photo, idx) => (
-                            <img
-                              key={idx}
-                              src={photo}
-                              alt={`${profile.name} ${idx + 1}`}
-                              className="w-full h-32 object-cover rounded-lg"
-                              draggable="false"
-                            />
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -285,21 +184,14 @@ export default function TinderSwipeCard() {
                   </div>
                   <div className="absolute top-12 right-12 pointer-events-none">
                     <div
-                      className="border-4 border-red-500 text-red-500 font-bold text-4xl px-6 py-3 rotate-[20deg] rounded-lg"
+                      className="border-4 border-red-500 text-red-500 font-bold text-4xl px-6 py-3 rounded-lg"
                       style={{ opacity: Math.max(0, -dragCurrent.x / 200) }}
                     >
                       NOPE
                     </div>
                   </div>
 
-                  {/* Scroll Indicator */}
-                  {scrollY === 0 && (
-                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 pointer-events-none">
-                      <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-full text-xs text-gray-600 animate-bounce">
-                        ↑ Swipe up to see more
-                      </div>
-                    </div>
-                  )}
+                  {/* Scroll Indicator removed */}
                 </div>
               )}
             </div>
@@ -307,7 +199,7 @@ export default function TinderSwipeCard() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center items-center gap-6 mt-8">
+        <div className="flex justify-center items-center gap-6 mt-4">
           <button
             onClick={() => handleButtonClick('left')}
             className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform active:scale-95"

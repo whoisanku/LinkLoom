@@ -3,6 +3,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SeedZ, type SeedOut, SYSTEM_PROMPT } from "./seed-schema";
 import type { FarcasterSeedEvidence } from "./farcasterValidation";
+import { gatherFarcasterSearchForQuery } from "./farcasterValidation";
 import { normalizeHandle, normalizeFarcasterHandle } from "./handle-utils";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
@@ -34,6 +35,69 @@ function mapType(t: any): "org"|"lab"|"foundation"|"maintainer"|"individual"|und
 
 function uniq(arr: string[]): string[] {
   return Array.from(new Set(arr));
+}
+
+function buildFarcasterQueryTerms(query: string): string[] {
+  const q = String(query || "").trim();
+  const terms = new Set<string>();
+  if (q) terms.add(q);
+  // Extract simple keywords (alphanumerics, 3+ chars)
+  const words = q.toLowerCase().match(/[a-z0-9_\.\-]{3,}/g) || [];
+  for (const w of words) terms.add(w);
+  // Heuristics for zk-related searches
+  if (q.toLowerCase().includes("zk") || q.toLowerCase().includes("zero knowledge")) {
+    terms.add("zk");
+    terms.add("zero knowledge");
+    terms.add("zksync");
+  }
+  return Array.from(terms).slice(0, 6);
+}
+
+function stripFillerPhrases(text: string): string {
+  let s = String(text || "").toLowerCase();
+  const patterns = [
+    /\b(i am|i'm|we are|we're)\b/g,
+    /\b(looking for|searching for|seeking|hiring|need|needing|wanted|want to find|find me|find)\b/g,
+    /\b(someone|who can|to)\b/g,
+  ];
+  for (const re of patterns) s = s.replace(re, " ");
+  s = s.replace(/[^a-z0-9_\.\-\s]/g, " ").replace(/\s+/g, " ").trim();
+  return s;
+}
+
+function fallbackSearchTerms(query: string): string[] {
+  const core = stripFillerPhrases(query);
+  const terms = new Set<string>();
+  if (core) terms.add(core);
+  // Light variations for common role words
+  if (/(engineer|engineering)/.test(core)) {
+    terms.add(core.replace(/engineering/g, "engineer"));
+    terms.add(core.replace(/engineer/g, "engineering"));
+    terms.add(core.replace(/engineering|engineer/g, "developer"));
+  }
+  return Array.from(terms).filter(Boolean).slice(0, 5);
+}
+
+async function extractSearchTermsWithGemini(genAI: GoogleGenerativeAI, query: string): Promise<string[]> {
+  const factory = () => genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: { responseMimeType: "application/json", temperature: 0.1 },
+  });
+  const prompt = `You will extract concise Farcaster search queries from a user sentence.\n` +
+    `- Return ONLY a JSON array of 2..8 short queries (strings).\n` +
+    `- Remove filler like "i am", "i'm", "we are", "looking for", "hiring", "need", etc.\n` +
+    `- Focus on role/skill/platform nouns and essential qualifiers (e.g., "solana engineer", "zk researcher").\n` +
+    `- Prefer tokens 2-4 words each.\n` +
+    `User text: """${query}"""`;
+  try {
+    const res = await generateWithRetry(factory, prompt);
+    const text = res?.response?.text?.() ?? "";
+    let arr: any = [];
+    try { arr = JSON.parse(text); } catch {}
+    const terms = Array.isArray(arr) ? arr.map((s) => String(s || "").trim()).filter(Boolean) : [];
+    if (terms.length > 0) return terms.slice(0, 8);
+  } catch {}
+  return fallbackSearchTerms(query);
 }
 
 function normalizeToSeedRaw(query: string, raw: any): any {
@@ -200,10 +264,21 @@ export async function autoSeed(query: string, opts?: {
     generationConfig,
   });
 
+  // Build trimmed search terms using Gemini + heuristic, then fetch Farcaster context
+  const mlTerms = await extractSearchTermsWithGemini(genAI, query);
+  const terms = uniq([...mlTerms, ...buildFarcasterQueryTerms(query)]).slice(0, 8);
+  const fcSearchContexts = await Promise.all(
+    terms.map((t) => gatherFarcasterSearchForQuery(t, { channels: 8, users: 12, casts: 60 }))
+  );
+
   const userPrompt =
 `Task: Generate seeds for a topic search in a graph discovery app.
 User query: "${query}"
 Context: audience=${opts?.audience ?? "builders/recruiters"}, region=${opts?.region ?? "global"}, seniority=${opts?.seniority ?? "any"}.
+
+Farcaster search context JSON (use to propose initial Farcaster seeds and candidates; prefer users and cast authors, use channels as hints):
+${JSON.stringify({ farcasterSearch: fcSearchContexts }, null, 2)}
+
 Return JSON only per schema.`;
 
   const res = await generateWithRetry(modelFactory, userPrompt);

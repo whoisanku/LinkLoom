@@ -4,11 +4,10 @@ import Search from './components/Search'
 import VoyageLoading from './components/VoyageLoading'
 import SeedEditor from './components/SeedEditor'
 import FinalCandidates from './components/FinalCandidates'
-import KeywordsEditor from './components/KeywordsEditor'
 import { ICONS } from '@/assets/icons/Icon'
 import Button from '@/components/ui/Button'
 import { autoSeed, refineSeedsWithEvidence } from '@/lib/autoSeedClient'
-import { gatherEvidenceForHandles } from '@/lib/farcasterValidation'
+import { gatherEvidenceForHandles, hydrateCandidatesToProfiles, quickProfilesForQuery, gatherFarcasterSearchForQuery, type TinderProfile } from '@/lib/farcasterValidation'
 import type { SeedOut } from '@/lib/seed-schema'
 import { fetchTopicCandidates, type TopicCandidate, type TopicSearchResponsePayload } from '@/lib/topicSearchClient'
 import TinderSwipeCard from './components/cardSwiper'
@@ -70,6 +69,7 @@ export default function LinkLoomApp() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [finalCandidates, setFinalCandidates] = useState<TopicCandidate[]>([])
   const [candidateMetadata, setCandidateMetadata] = useState<TopicSearchResponsePayload['metadata'] | null>(null)
+  const [swipeProfiles, setSwipeProfiles] = useState<TinderProfile[]>([])
 
   const handleSearchQuery = (data: string) => {
     setSearchQuery(data)
@@ -132,6 +132,7 @@ export default function LinkLoomApp() {
     setErrorMessage(null)
     setFinalCandidates([])
     setCandidateMetadata(null)
+    setSwipeProfiles([])
     setIsLoading(false)
     setIsRefined(false)
     setIsRefining(false)
@@ -177,30 +178,7 @@ export default function LinkLoomApp() {
     })
   }
 
-  const handleKeywordChange = (type: 'positive' | 'weak' | 'negative', index: number, value: string) => {
-    setIsRefined(false)
-    setDraftKeywords((prev) => {
-      const next = { ...prev, [type]: [...prev[type]] } as typeof prev
-      next[type][index] = value
-      return next
-    })
-  }
 
-  const handleKeywordRemove = (type: 'positive' | 'weak' | 'negative', index: number) => {
-    setIsRefined(false)
-    setDraftKeywords((prev) => {
-      const next = { ...prev, [type]: prev[type].filter((_, i) => i !== index) } as typeof prev
-      return next
-    })
-  }
-
-  const handleKeywordAdd = (type: 'positive' | 'weak' | 'negative') => {
-    setIsRefined(false)
-    setDraftKeywords((prev) => {
-      const next = { ...prev, [type]: [...prev[type], ''] } as typeof prev
-      return next
-    })
-  }
 
   const runCandidateSearch = useCallback(async (seedData: SeedOut, fallbackTopic: string) => {
     const farcasterSeeds = Array.isArray(seedData.seeds?.farcaster)
@@ -222,6 +200,12 @@ export default function LinkLoomApp() {
 
     setFinalCandidates(response.candidates ?? [])
     setCandidateMetadata(response.metadata ?? null)
+    try {
+      const profiles = await hydrateCandidatesToProfiles(response.candidates ?? [], 20)
+      setSwipeProfiles(profiles)
+    } catch {
+      setSwipeProfiles([])
+    }
   }, [])
 
   const handleConfirm = async () => {
@@ -258,6 +242,38 @@ export default function LinkLoomApp() {
             negative: draftKeywords.negative.filter(Boolean),
           },
         }
+        // Show the first user as soon as we get a search-users response
+        ;(async () => {
+          try {
+            const ctx = await gatherFarcasterSearchForQuery(query, { users: 1 })
+            const first = (ctx.endpoints.users.data as any)?.users?.[0]
+            if (first) {
+              const firstProfile: TinderProfile = {
+                id: Number(first?.fid ?? 0),
+                name: String(first?.displayName || first?.username || 'user'),
+                mainImage: String(first?.pfp?.url || '/placeholder.svg'),
+                bio: String(first?.profile?.bio?.text || ''),
+                interests: [],
+                gallery: [],
+                passions: [],
+                distance: undefined,
+                job: undefined,
+                education: undefined,
+              }
+              setSwipeProfiles((prev) => (prev.length > 0 ? prev : [firstProfile]))
+            }
+          } catch {}
+        })()
+
+        // In the background, fetch more quick profiles and replace with a fuller list
+        ;(async () => {
+          try {
+            const fastProfiles = await quickProfilesForQuery(query, 30)
+            if (Array.isArray(fastProfiles) && fastProfiles.length > 0) {
+              setSwipeProfiles(fastProfiles)
+            }
+          } catch {}
+        })()
         await runCandidateSearch(refinedForSearch, query)
         scrollToTop()
       }
@@ -296,7 +312,7 @@ export default function LinkLoomApp() {
 
   return (
     <>
-      {(isLoading || isRefining) && (
+      {(isLoading || isRefining) && swipeProfiles.length === 0 && (
         <div className="fixed inset-0 top-[48px] z-50 bg-background overflow-hidden">
           <VoyageLoading query={executedQuery || searchQuery} />
         </div>
@@ -304,7 +320,7 @@ export default function LinkLoomApp() {
 
       <Page ref={pageRef}>
         <div className="relative flex h-full w-full flex-col items-center justify-start">
-          {!isLoading && (
+          {!isLoading && swipeProfiles.length === 0 && (
             <div className="w-full max-w-5xl px-4 sm:px-6 lg:px-10">
               {!seeds && (
                 <Search
@@ -334,7 +350,7 @@ export default function LinkLoomApp() {
                 </div>
               )}
 
-              {seeds && (
+              {seeds && !(isRefined && isRefining) && swipeProfiles.length === 0 && (
                 <div className="mt-12 flex flex-col gap-8 text-white">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
@@ -458,9 +474,14 @@ export default function LinkLoomApp() {
               )}
             </div>
           )}
+          {swipeProfiles.length > 0 && (
+            <div className="w-full max-w-2xl px-4 sm:px-6 lg:px-10">
+              <TinderSwipeCard profiles={swipeProfiles} />
+            </div>
+          )}
         </div>
 
-        <TinderSwipeCard />
+        
       </Page>
     </>
   )
