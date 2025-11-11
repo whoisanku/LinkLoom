@@ -1,6 +1,8 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "http://paid4.daki.cc:4008/" },
-    { "source": "/fc/(.*)", "destination": "https://client.farcaster.xyz/$1" }
+    { "source": "/fc/(.*)", "destination": "https://client.farcaster.xyz/$1" },
+    { "source": "/api/search", "destination": "http://paid4.daki.cc:4008/api/topic/search" },
+    { "source": "/api/topic/(.*)", "destination": "http://paid4.daki.cc:4008/api/topic/$1" },
+    { "source": "/api/(.*)", "destination": "http://paid4.daki.cc:4008/api/$1" }
   ]
 }
