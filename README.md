@@ -1,6 +1,6 @@
 # LinkLoom
 
-LinkLoom is a hackathon-ready networking copilot that helps founders (and the teams that support them) spin up qualified warm-introduction lists in minutes. The project stitches together a React front end for drafting and validating "seed" accounts with a TypeScript/Hono API that cross-references Farcaster social graphs, applies Gemini 2.5 Flash for semantic filtering, and returns an explainable ranking.
+LinkLoom is our hackathon project submission: a networking copilot that helps founders (and the teams that support them) discover the right people based on what they build, start warm conversations, and swipe through alternatives when a match is not the vibe. The project stitches together a React front end for drafting and validating "seed" accounts with a TypeScript/Hono API that cross-references Farcaster social graphs, applies Gemini 2.5 Flash for semantic filtering, and returns an explainable ranking.
 
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)
@@ -57,10 +57,10 @@ graph LR
 
 - **Stacks & tooling**: React 19, TypeScript, Vite 7, Tailwind CSS 4, Redux Toolkit, TanStack Query, Wagmi + Farcaster Mini App connector, Sonner toasts.
 - **Core workflows**:
-  - _Auto-seed_: Calls Gemini from the browser (with rate limiting) to propose Farcaster/Twitter handles and topic keywords.
-  - _Seed refinement_: Users edit, add, or remove handles before triggering backend validation.
-  - _Candidate review_: Ranked results from the backend render as sortable tables and optional swipe cards for quick vetting.
-  - _Farcaster hydration_: The client can progressively fetch extra profile evidence using the Farcaster public API to show receipts alongside Gemini rationales.
+  - _Auto-seed_: Calls Gemini from the browser (with rate limiting) to propose Farcaster/Twitter handles and topic keywords tailored to the opportunity.
+  - _Seed refinement_: Users edit, add, or remove handles before triggering backend validation so the matches stay relevant to the mission.
+  - _Candidate review_: Ranked results from the backend render as sortable tables and an interactive swipe deck for matching or passing to see more people.
+  - _Farcaster hydration_: The client can progressively fetch extra profile evidence using the Farcaster public API to show receipts alongside Gemini rationales for each potential match.
 - **State & persistence**:
   - Auth/session details live in Redux and persist via AES-encrypted `localStorage` helpers.
   - Axios is pre-configured to attach tokens or call the same-origin backend depending on deployment.
@@ -75,7 +75,7 @@ The backend resides in `backend/` and exposes a single `POST /api/topic/search` 
   2. **Keyword intelligence** – Extracts keywords from the topic query, generates optional negative keywords via Gemini, and prepares scoring thresholds.
   3. **AI alignment** – Batches top candidates into Gemini prompts to filter spam or off-topic accounts using bios + usernames.
   4. **Scoring** – Applies a deterministic scoring utility weighting seed overlap, keyword matches, and follower credibility to produce explainable `why` fields.
-  5. **Result shaping** – Sorts, caps, and returns the top candidates with metadata, keeping logs verbose for hackathon debugging.
+  5. **Result shaping** – Sorts, caps, and returns the top candidates with metadata, keeping logs verbose for fast hackathon debugging.
 - **Observability**: Console logging surfaces environment sanity checks, API usage, fallbacks, and failure reasons so you can trace each stage quickly during demos.
 
 ## Backend Processing Flow
@@ -228,4 +228,4 @@ curl -X POST http://localhost:3001/api/topic/search \
 └── ...
 ```
 
-Happy hacking—pull requests, feature ideas, and demo feedback are all welcome!
+Happy linking—pull requests, feature ideas, and demo feedback are all welcome!
