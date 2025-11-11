@@ -11,7 +11,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: "http://paid4.daki.cc:4008",
         changeOrigin: true,
         secure: false,
       },

@@ -87,6 +87,7 @@ export async function quickProfilesForQuery(query: string, max = 30): Promise<Ti
         distance: undefined,
         job: undefined,
         education: undefined,
+        username,
       });
       if (out.length >= max) return out;
     }
@@ -108,6 +109,7 @@ export type TinderProfile = {
   passions: string[];
   score?: number;
   seedFollows?: number;
+  username?: string;
 };
 
 export async function hydrateCandidatesToProfiles(candidates: TopicCandidate[], max = 20): Promise<TinderProfile[]> {
@@ -129,10 +131,42 @@ export async function hydrateCandidatesToProfiles(candidates: TopicCandidate[], 
         education: undefined,
         score: typeof c.score === 'number' ? c.score : undefined,
         seedFollows: typeof c.why?.seeds === 'number' ? c.why.seeds : undefined,
+        username: c.username,
       });
     } catch {}
   }
   return out;
+}
+
+export async function progressiveHydrateCandidates(
+  candidates: TopicCandidate[],
+  options: { max?: number; onProfile: (p: TinderProfile) => void }
+): Promise<void> {
+  const max = Math.max(1, Math.floor(options?.max ?? 20));
+  const ordered = [...candidates].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, max);
+  for (const c of ordered) {
+    try {
+      const basic = await fetchFarcasterUserBasic(c.username);
+      const profile: TinderProfile = {
+        id: c.fid,
+        name: (basic?.displayName || c.displayName || c.username) as string,
+        mainImage: basic?.avatarUrl || c.pfpUrl || "/placeholder.svg",
+        bio: basic?.bio || c.bio || "",
+        interests: [],
+        gallery: [],
+        passions: [],
+        distance: undefined,
+        job: undefined,
+        education: undefined,
+        score: typeof c.score === 'number' ? c.score : undefined,
+        seedFollows: typeof c.why?.seeds === 'number' ? c.why.seeds : undefined,
+        username: c.username,
+      };
+      options.onProfile(profile);
+    } catch {
+      // ignore individual failures and continue
+    }
+  }
 }
 
 function buildSearchUrl(endpoint: Endpoint, query: string, opts?: { channels?: number; users?: number; casts?: number }): string {

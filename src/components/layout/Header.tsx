@@ -70,7 +70,18 @@ const Header = () => {
 
   return (
     <div className="bg-header py-2 px-2 flex justify-between items-center sticky top-0 z-10">
-      <Heading variant="h3" title="Link Loom" color="white" fontWeight={700} onClick={() => navigate('/')} />
+      <Heading
+        variant="h3"
+        title="Link Loom"
+        color="white"
+        fontWeight={700}
+        onClick={() => {
+          navigate('/');
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('linkloom:reset'))
+          }
+        }}
+      />
       <div className="flex gap-4">
         <ProfileButton />
       </div>

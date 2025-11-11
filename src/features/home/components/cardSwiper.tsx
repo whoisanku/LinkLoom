@@ -1,24 +1,28 @@
 import { useState, useRef, useEffect } from 'react'
-import { Heart, X, Star } from 'lucide-react'
+import { Heart, X } from 'lucide-react'
+import { sdk } from '@farcaster/miniapp-sdk'
 import type { TinderProfile } from '@/lib/farcasterValidation'
 
 export default function TinderSwipeCard({ profiles }: { profiles: TinderProfile[] }) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [cards, setCards] = useState<TinderProfile[]>(profiles)
+  const [cards, setCards] = useState<TinderProfile[]>([])
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [dragCurrent, setDragCurrent] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [scrollY, setScrollY] = useState(0)
   const [isScrolling, setIsScrolling] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
   const cardRef = useRef(null)
 
   useEffect(() => {
-    setCards(profiles)
-    setCurrentIndex(0)
-    setDragCurrent({ x: 0, y: 0 })
-    setScrollY(0)
-    setIsDragging(false)
-    setIsScrolling(false)
+    // Incrementally adopt new profiles without resetting currentIndex
+    setCards((prev) => {
+      if (!prev || prev.length === 0) return profiles
+      const prevIds = new Set(prev.map((p) => p.id))
+      const additions = profiles.filter((p) => !prevIds.has(p.id))
+      if (additions.length === 0) return prev
+      return [...prev, ...additions]
+    })
   }, [profiles])
 
   const currentProfile = cards[currentIndex]
@@ -56,7 +60,13 @@ export default function TinderSwipeCard({ profiles }: { profiles: TinderProfile[
       const threshold = 100
       if (Math.abs(dragCurrent.x) > threshold) {
         const direction = dragCurrent.x > 0 ? 'right' : 'left'
-        animateSwipe(direction)
+        const isLast = cards.length <= 1
+        if (direction === 'left' && isLast) {
+          // Do not allow swiping away the last card
+          setDragCurrent({ x: 0, y: 0 })
+        } else {
+          animateSwipe(direction)
+        }
       } else {
         setDragCurrent({ x: 0, y: 0 })
       }
@@ -67,27 +77,39 @@ export default function TinderSwipeCard({ profiles }: { profiles: TinderProfile[
   }
 
   const animateSwipe = (direction: 'left' | 'right' | 'up') => {
-    if (!cards || cards.length === 0) return
+    if (!cards || cards.length === 0 || isAnimating) return
+    setIsAnimating(true)
     const flyOut = direction === 'right' ? 1000 : -1000
     setDragCurrent({ x: flyOut, y: 0 })
 
     setTimeout(() => {
-      setCurrentIndex((prev) => {
-        const len = cards.length
-        if (len === 0) return 0
-        const next = prev + 1
-        return next >= len ? 0 : next
-      })
+      // Remove the swiped card to avoid wrap-around
+      setCards((prev) => prev.filter((_, idx) => idx !== currentIndex))
+      setCurrentIndex(0)
       setDragCurrent({ x: 0, y: 0 })
       setScrollY(0)
+      setIsAnimating(false)
     }, 300)
   }
 
-  const handleButtonClick = (direction: 'left' | 'right' | 'up') => {
-    if (direction === 'up') {
-      setScrollY(500)
+  const handleButtonClick = async (direction: 'left' | 'right') => {
+    if (isAnimating) return
+    const isLast = cards.length <= 1
+    if (direction === 'right') {
+      try {
+        if (currentProfile?.id && sdk?.actions?.viewProfile) {
+          await sdk.actions.viewProfile({ fid: currentProfile.id })
+          return
+        }
+        if (currentProfile?.username) {
+          window.location.href = `https://warpcast.com/${currentProfile.username}`
+          return
+        }
+      } catch {}
+      animateSwipe('right')
     } else {
-      animateSwipe(direction)
+      if (isLast) return
+      animateSwipe('left')
     }
   }
 
@@ -145,7 +167,7 @@ export default function TinderSwipeCard({ profiles }: { profiles: TinderProfile[
                         className="w-full h-full object-cover"
                         draggable="false"
                       />
-                      <div className="absolute inset-0 bg-linear-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
 
                       {(typeof profile.score === 'number' || typeof profile.seedFollows === 'number') && (
                         <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
@@ -164,11 +186,11 @@ export default function TinderSwipeCard({ profiles }: { profiles: TinderProfile[
 
                       {/* Basic Info Overlay */}
                       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                        <h2 className="text-4xl font-bold mb-1">
+                        <h2 className="text-4xl font-bold mb-1" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8)' }}>
                           {profile.name}
                           {profile.age ? `, ${profile.age}` : ''}
                         </h2>
-                        <p className="mt-2 text-sm">{profile.bio}</p>
+                        <p className="mt-2 text-sm" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85)' }}>{profile.bio}</p>
                       </div>
                     </div>
                   </div>
@@ -202,15 +224,10 @@ export default function TinderSwipeCard({ profiles }: { profiles: TinderProfile[
         <div className="flex justify-center items-center gap-6 mt-4">
           <button
             onClick={() => handleButtonClick('left')}
-            className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform active:scale-95"
+            disabled={cards.length <= 1}
+            className={`w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center transition-transform active:scale-95 ${cards.length <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:scale-110'}`}
           >
             <X size={32} className="text-red-500" />
-          </button>
-          <button
-            onClick={() => handleButtonClick('up')}
-            className="w-14 h-14 bg-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform active:scale-95"
-          >
-            <Star size={28} className="text-blue-500" />
           </button>
           <button
             onClick={() => handleButtonClick('right')}

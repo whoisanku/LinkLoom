@@ -2,12 +2,12 @@ import Page from '@/components/ui/Page'
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import Search from './components/Search'
 import VoyageLoading from './components/VoyageLoading'
-import SeedEditor from './components/SeedEditor'
 import FinalCandidates from './components/FinalCandidates'
+import SeedEditor from './components/SeedEditor'
 import { ICONS } from '@/assets/icons/Icon'
 import Button from '@/components/ui/Button'
 import { autoSeed, refineSeedsWithEvidence } from '@/lib/autoSeedClient'
-import { gatherEvidenceForHandles, hydrateCandidatesToProfiles, quickProfilesForQuery, gatherFarcasterSearchForQuery, type TinderProfile } from '@/lib/farcasterValidation'
+import { gatherEvidenceForHandles, progressiveHydrateCandidates, type TinderProfile } from '@/lib/farcasterValidation'
 import type { SeedOut } from '@/lib/seed-schema'
 import { fetchTopicCandidates, type TopicCandidate, type TopicSearchResponsePayload } from '@/lib/topicSearchClient'
 import TinderSwipeCard from './components/cardSwiper'
@@ -70,6 +70,7 @@ export default function LinkLoomApp() {
   const [finalCandidates, setFinalCandidates] = useState<TopicCandidate[]>([])
   const [candidateMetadata, setCandidateMetadata] = useState<TopicSearchResponsePayload['metadata'] | null>(null)
   const [swipeProfiles, setSwipeProfiles] = useState<TinderProfile[]>([])
+  const [isCardLoading, setIsCardLoading] = useState(false)
 
   const handleSearchQuery = (data: string) => {
     setSearchQuery(data)
@@ -104,6 +105,7 @@ export default function LinkLoomApp() {
             negative: [...out.normalized_keywords.negative],
           })
           setIsRefined(false)
+    setIsCardLoading(false)
           scrollToTop()
         }
       } catch (error) {
@@ -139,6 +141,19 @@ export default function LinkLoomApp() {
     setDraftKeywords({ positive: [], weak: [], negative: [] })
     scrollToTop()
   }
+
+  // Allow header click to reset the app back to the search screen
+  useEffect(() => {
+    const onGlobalReset = () => handleReset()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('linkloom:reset', onGlobalReset)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('linkloom:reset', onGlobalReset)
+      }
+    }
+  }, [])
 
   const setBodyOverflow = (lock: boolean) => {
     if (typeof document === 'undefined') return
@@ -190,6 +205,7 @@ export default function LinkLoomApp() {
       return
     }
 
+    setIsCardLoading(true)
     const response = await fetchTopicCandidates({
       seeds: farcasterSeeds,
       topic: seedData.topic || fallbackTopic,
@@ -200,12 +216,19 @@ export default function LinkLoomApp() {
 
     setFinalCandidates(response.candidates ?? [])
     setCandidateMetadata(response.metadata ?? null)
-    try {
-      const profiles = await hydrateCandidatesToProfiles(response.candidates ?? [], 20)
-      setSwipeProfiles(profiles)
-    } catch {
-      setSwipeProfiles([])
-    }
+    setSwipeProfiles([])
+    void progressiveHydrateCandidates(response.candidates ?? [], {
+      max: 20,
+      onProfile: (p) => {
+        setSwipeProfiles((prev) => {
+          // avoid duplicates by id
+          if (prev.some((x) => x.id === p.id)) return prev
+          const next = [...prev, p]
+          if (next.length === 1) setIsCardLoading(false)
+          return next
+        })
+      },
+    })
   }, [])
 
   const handleConfirm = async () => {
@@ -242,38 +265,6 @@ export default function LinkLoomApp() {
             negative: draftKeywords.negative.filter(Boolean),
           },
         }
-        // Show the first user as soon as we get a search-users response
-        ;(async () => {
-          try {
-            const ctx = await gatherFarcasterSearchForQuery(query, { users: 1 })
-            const first = (ctx.endpoints.users.data as any)?.users?.[0]
-            if (first) {
-              const firstProfile: TinderProfile = {
-                id: Number(first?.fid ?? 0),
-                name: String(first?.displayName || first?.username || 'user'),
-                mainImage: String(first?.pfp?.url || '/placeholder.svg'),
-                bio: String(first?.profile?.bio?.text || ''),
-                interests: [],
-                gallery: [],
-                passions: [],
-                distance: undefined,
-                job: undefined,
-                education: undefined,
-              }
-              setSwipeProfiles((prev) => (prev.length > 0 ? prev : [firstProfile]))
-            }
-          } catch {}
-        })()
-
-        // In the background, fetch more quick profiles and replace with a fuller list
-        ;(async () => {
-          try {
-            const fastProfiles = await quickProfilesForQuery(query, 30)
-            if (Array.isArray(fastProfiles) && fastProfiles.length > 0) {
-              setSwipeProfiles(fastProfiles)
-            }
-          } catch {}
-        })()
         await runCandidateSearch(refinedForSearch, query)
         scrollToTop()
       }
@@ -307,28 +298,50 @@ export default function LinkLoomApp() {
     return [...farcasterList, ...twitterList]
   }, [draftSeeds])
 
-  const confirmLabel = isRefining ? 'Validating...' : isRefined ? 'Run Search' : 'Confirm Seeds'
+  const confirmLabel = isRefining ? 'Validating...' : isRefined ? 'Search' : 'Confirm'
   const confirmIsSuccess = isRefined && !isRefining
 
   return (
     <>
-      {(isLoading || isRefining) && swipeProfiles.length === 0 && (
+      {(isLoading || isRefining || isCardLoading) && swipeProfiles.length === 0 && (
         <div className="fixed inset-0 top-[48px] z-50 bg-background overflow-hidden">
-          <VoyageLoading query={executedQuery || searchQuery} />
+          <VoyageLoading query={executedQuery || searchQuery} showHint={isCardLoading} />
         </div>
       )}
 
       <Page ref={pageRef}>
         <div className="relative flex h-full w-full flex-col items-center justify-start">
-          {!isLoading && swipeProfiles.length === 0 && (
+          {!isLoading && swipeProfiles.length === 0 && !isCardLoading && (
             <div className="w-full max-w-5xl px-4 sm:px-6 lg:px-10">
               {!seeds && (
-                <Search
-                  type={'target'}
-                  getSearchQuery={handleSearchQuery}
-                  setIsLoading={setIsLoading}
-                  isLoading={isLoading}
-                />
+                <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 64px)' }}>
+                  <div className="flex flex-col items-center gap-5">
+                    <Search
+                      type={'target'}
+                      getSearchQuery={handleSearchQuery}
+                      setIsLoading={setIsLoading}
+                      isLoading={isLoading}
+                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-[0.3em] text-white/60">Suggested</span>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {['shefi scholar', 'zk developer', 'solana dev', 'web3 dev', 'crypto dev', 'crypto trader', 'crypto analyst'].map((q) => (
+                          <button
+                            key={q}
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery(q)
+                              setIsLoading(true)
+                            }}
+                            className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10 hover:border-white/25 transition"
+                          >
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {errorMessage && (
@@ -352,42 +365,34 @@ export default function LinkLoomApp() {
 
               {seeds && !(isRefined && isRefining) && swipeProfiles.length === 0 && (
                 <div className="mt-12 flex flex-col gap-8 text-white">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.45em] text-white/50">Review signal shortlist</p>
-                      <h2 className="text-3xl font-semibold">{executedQuery}</h2>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      <Button
-                        variant="outline"
-                        onClick={handleReset}
-                        className="border-white/20 text-white/70 hover:text-white hover:border-white/40"
-                      >
-                        {ICONS.close}
-                        Reset
-                      </Button>
-                    </div>
+                  <div className="px-2">
+                    <h1 className="text-base sm:text-lg font-semibold text-white">
+                      Confirm keywords to start your search
+                    </h1>
                   </div>
-
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  <div className="relative">
                     <SeedEditor
-                      title="Farcaster"
-                      color="from-[#3da8ff33]"
+                      title=""
+                      color="from-[#3da8ff22]"
                       type="farcaster"
                       values={draftSeeds.farcaster}
                       onChange={handleDraftChange}
                       onRemove={handleDraftRemove}
                       onAdd={() => handleDraftAdd('farcaster')}
                     />
-                    <SeedEditor
-                      title="Twitter"
-                      color="from-[#3da8ff22]"
-                      type="twitter"
-                      values={draftSeeds.twitter}
-                      onChange={handleDraftChange}
-                      onRemove={handleDraftRemove}
-                      onAdd={() => handleDraftAdd('twitter')}
-                    />
+                    <div className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-4">
+                      <div className="truncate pr-3 text-white text-xl sm:text-2xl font-semibold" title={executedQuery}>
+                        {executedQuery}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleReset}
+                        className="w-9 h-9 rounded-full border border-white/20 text-white/80 hover:text-white hover:border-white/40 flex items-center justify-center"
+                        aria-label="Reset"
+                      >
+                        {ICONS.close}
+                      </button>
+                    </div>
                   </div>
 
                   {/* <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

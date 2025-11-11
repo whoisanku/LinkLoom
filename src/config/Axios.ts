@@ -3,7 +3,8 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { store, type RootState } from '@config/Store'
 
 export const AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_APP_API_URL || '',
+  // Prefer env override; otherwise use same-origin so Vercel rewrites/edge proxy can handle /api/*
+  baseURL: ((import.meta as any)?.env?.VITE_APP_API_URL as string | undefined) || '',
   headers: {
     Accept: '*/*',
     'Content-Type': 'application/json',

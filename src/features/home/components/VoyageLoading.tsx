@@ -2,6 +2,7 @@ import { useMemo, type CSSProperties } from 'react'
 
 type VoyageLoadingProps = {
   query: string
+  showHint?: boolean
 }
 
 type VoyageWordConfig = {
@@ -32,7 +33,7 @@ const FALLBACK_WORDS = [...DSSD_WORDS]
 
 const OFFSETS = [-220, -140, -80, -20, 40, 100, 160, 220]
 
-const VoyageLoading = ({ query }: VoyageLoadingProps) => {
+const VoyageLoading = ({ query, showHint = false }: VoyageLoadingProps) => {
   const wordConfigs = useMemo<VoyageWordConfig[]>(() => {
     const tokens = query
       .split(/\s+/)
@@ -62,7 +63,7 @@ const VoyageLoading = ({ query }: VoyageLoadingProps) => {
   }, [query])
 
   return (
-    <div className="voyage-loading-container">
+    <div className="voyage-loading-container relative">
       <div className="voyage-loading-space pointer-events-none" />
       <div className="voyage-loading-stage">
         {wordConfigs.map(({ text, delay, duration, offset }, index) => (
@@ -91,6 +92,14 @@ const VoyageLoading = ({ query }: VoyageLoadingProps) => {
           </svg>
         </div>
       </div>
+      {showHint && (
+        <div className="pointer-events-auto absolute inset-x-0 top-6 sm:top-10 flex flex-col items-center px-6 text-center">
+          <h1 className="text-white text-lg sm:text-2xl font-semibold">This may take a moment</h1>
+          <h1 className="mt-1 text-white/70">
+            You can browse Farcaster meanwhile.
+          </h1>
+        </div>
+      )}
     </div>
   )
 }

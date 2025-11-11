@@ -42,6 +42,17 @@ const Search = ({ type, getSearchQuery, isLoading, setIsLoading }: SearchProps) 
     handleSearch({ search: searchValue })
   }, [searchValue, handleSearch])
 
+  const onSubmit = useCallback(
+    (data: { search: string }) => {
+      const term = (data?.search || '').trim()
+      if (isLoading) return
+      if (term.length >= 3) {
+        setIsLoading(true)
+      }
+    },
+    [isLoading, setIsLoading],
+  )
+
   const searchIcon = (
     <div className="text-xl p-1.5 mx-auto my-auto rounded-full border-0 bg-white text-black font-bold">
       {ICONS.search}
@@ -53,7 +64,7 @@ const Search = ({ type, getSearchQuery, isLoading, setIsLoading }: SearchProps) 
       <Heading variant={'h2'} title={CONSTANTS.TITLE.SEARCH} color="white" className="justify-center text-center" />
       <div className="flex flex-col gap-3">
         <FormProvider {...methods}>
-          <form onSubmit={(e) => e.preventDefault()} autoComplete="off">
+          <form onSubmit={methods.handleSubmit(onSubmit)} autoComplete="off">
             <div className="w-full flex rounded-full bg-primary">
               <TextField
                 name="search"
@@ -69,9 +80,8 @@ const Search = ({ type, getSearchQuery, isLoading, setIsLoading }: SearchProps) 
               />
               {searchValue ? (
                 <Button
-                  type="button"
+                  type="submit"
                   className="rounded-full"
-                  onClick={() => setIsLoading(true)}
                   disabled={isLoading || searchValue.trim().length < 3}
                   loading={isLoading}
                 >
