@@ -1,5 +1,6 @@
 
 import { type ReactNode, useState, type JSX } from 'react'
+import { createPortal } from 'react-dom'
 
 export interface ModalType {
   trigger: ReactNode
@@ -34,23 +35,23 @@ const Modal = ({ trigger, children, open: controlledOpen, onOpenChange }: ModalT
   return (
     <>
       <div onClick={handleOpen}>{trigger}</div>
-
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay" onClick={handleBackdropClick}>
-          <div className="relative bg-modal-background rounded-lg shadow-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+      {isOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={handleBackdropClick}>
+          <div className="relative w-full max-w-md mx-4 max-h-[88vh] overflow-y-auto rounded-3xl border border-white/10 bg-white/5 shadow-xl backdrop-blur">
             <button
               onClick={handleClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute top-3 right-3 w-9 h-9 rounded-full border border-white/20 text-white/80 hover:text-white hover:border-white/40 flex items-center justify-center"
               aria-label="Close modal"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <div className="p-6">{children}</div>
+            <div className="p-5 sm:p-6">{children}</div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

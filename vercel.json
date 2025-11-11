@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "http://paid4.daki.cc:4008/" }
+  ]
+}

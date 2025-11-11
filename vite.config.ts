@@ -10,10 +10,21 @@ export default defineConfig({
   server: {
     allowedHosts: true,
     proxy: {
+      "/api": {
+        target: "http://paid4.daki.cc:4008",
+        changeOrigin: true,
+        secure: false,
+      },
       "/garplet-jobs": {
         target: "http://localhost:5173",
         changeOrigin: true,
         secure: false,
+      },
+      "/fc": {
+        target: "https://client.farcaster.xyz",
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/fc/, ""),
       },
     },
   },
@@ -39,4 +50,5 @@ export default defineConfig({
    
   },
 })
+
 

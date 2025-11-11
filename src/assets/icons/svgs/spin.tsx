@@ -1,9 +1,3 @@
-
-import React from 'react';  
-
-interface SpinProps {
-    className?: string;
-}
 const Spin = () => {
   return (
     <svg
