@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import type { TopicSearchRequest, TopicSearchResponse, Candidate } from '../types';
-import { createMemoryClient } from '../lib/memory';
-import { rankByTopicScore, extractKeywords } from '../lib/scoring';
-import { batchCheckBioAlignment, generateNegativeKeywords } from '../lib/gemini';
+import type { TopicSearchRequest, TopicSearchResponse, Candidate } from '../types/index.js';
+import { createMemoryClient } from '../lib/memory.js';
+import { rankByTopicScore, extractKeywords } from '../lib/scoring.js';
+import { batchCheckBioAlignment, generateNegativeKeywords } from '../lib/gemini.js';
 
 const topic = new Hono();
 

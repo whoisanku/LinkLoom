@@ -1,4 +1,4 @@
-import type { FarcasterFollowersResponse, FarcasterProfile, FarcasterFollower, MemoryAPIOptions } from '../types/memory';
+import type { FarcasterFollowersResponse, FarcasterProfile, FarcasterFollower, MemoryAPIOptions } from '../types/memory.js';
 
 const MEMORY_API_BASE = 'https://api.memoryproto.co';
 

@@ -1,7 +1,9 @@
+import 'dotenv/config';
+import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import topicRoutes from './routes/topic';
+import topicRoutes from './routes/topic.js';
 
 // Verify environment variables are loaded
 console.log('🔍 Environment Variables Check:');
@@ -38,11 +40,11 @@ app.notFound((c) => {
   );
 });
 
-const port = process.env.PORT || 3001;
+const port = Number(process.env.PORT) || 3001;
 
 console.log(`🚀 Server is running on http://localhost:${port}`);
 
-export default {
-  port,
+serve({
   fetch: app.fetch,
-};
+  port,
+});
